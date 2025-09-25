@@ -21,8 +21,13 @@
     body { padding: 16px; -webkit-text-size-adjust: 100%; }
     h1 { margin: 0 0 12px 0; font-size: 1.4rem; }
     .card { border: 1px solid color-mix(in srgb, CanvasText 20%, transparent); border-radius: 14px; padding: 14px; margin-bottom: 14px; }
+
+    /* linhas padrão: label | campo (para % e frete) */
     .row { display: grid; grid-template-columns: 1fr 70px; gap: 10px; align-items: center; margin: 8px 0; }
-    label { font-weight: 600; font-size: var(--label-size); }
+
+    /* nova linha dos produtos: label | preço | qtd (tudo na mesma linha) */
+    .row3 { display: grid; grid-template-columns: 1fr 100px 70px; gap: 10px; align-items: center; margin: 8px 0; }
+    label { font-weight: 600; font-size: var(--label-size); white-space: nowrap; } /* evita quebrar PRODUTO 1 e QTD */
     input[type="number"], input[type="text"] {
       padding: var(--input-pad);
       border-radius: 10px;
@@ -35,8 +40,10 @@
     .muted { color: gray; font-size: .9rem; }
     .result { font-weight: 700; font-size: 1.15rem; }
     .warn { color: #b45d00; }
-    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .toggle { display:flex; align-items:center; gap:8px; }
+    @media (max-width: 360px){
+      .row3 { grid-template-columns: 1fr 90px 64px; } /* aperta um pouco nos iPhones menores */
+    }
   </style>
 </head>
 <body>
@@ -75,12 +82,16 @@
 
     const itemsDiv = document.getElementById('items');
     const itemInputs = [];
+    itemsDiv.innerHTML = '';
+
+    // UMA LINHA POR PRODUTO: label | preço | QTD
     for (let i=1; i<=6; i++) {
       const wrap = document.createElement('div');
-      wrap.className = 'grid2';
+      wrap.className = 'row3';
       wrap.innerHTML = `
-        <div class="row"><label>PRODUTO ${i}</label><input type="number" inputmode="decimal" step="0.01" id="b${i}" placeholder="0,00"></div>
-        <div class="row"><label>QTD</label><input type="number" inputmode="numeric" pattern="[0-9]*" step="1" id="c${i}" value="1"></div>
+        <label>PRODUTO ${i}</label>
+        <input class="money" type="number" inputmode="decimal" step="0.01" id="b${i}" placeholder="0,00">
+        <input class="qty" type="number" inputmode="numeric" pattern="[0-9]*" step="1" id="c${i}" value="1" aria-label="QTD">
       `;
       itemsDiv.appendChild(wrap);
       itemInputs.push('b'+i, 'c'+i);
@@ -119,7 +130,7 @@
       document.getElementById('c8').textContent = brl(c8);
       document.getElementById('c12').textContent = brl(c12);
 
-      // Persistência automática
+      // persistência automática
       const data = {};
       ids.forEach(id => {
         const el = document.getElementById(id);
@@ -128,7 +139,7 @@
       localStorage.setItem('precificador', JSON.stringify(data));
     }
 
-    // Restaura dados salvos
+    // restaura dados salvos
     const saved = localStorage.getItem('precificador');
     if (saved) {
       const data = JSON.parse(saved);
