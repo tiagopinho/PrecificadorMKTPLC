@@ -2,132 +2,98 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <title>Precificador</title>
+  <title>Precificador Markup</title>
   <style>
-    :root { color-scheme: light dark; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
-    body { margin: 0; padding: 16px; }
+    :root {
+      color-scheme: light dark;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      --label-size: 15px;
+      --input-size: 16px; /* >=16px evita zoom no iPhone */
+      --input-pad: 10px;
+      --input-width: 100%;
+    }
+    html, body { margin: 0; padding: 0; }
+    body { padding: 16px; -webkit-text-size-adjust: 100%; }
     h1 { margin: 0 0 12px 0; font-size: 1.4rem; }
     .card { border: 1px solid color-mix(in srgb, CanvasText 20%, transparent); border-radius: 14px; padding: 14px; margin-bottom: 14px; }
-    .row { display: grid; grid-template-columns: 1fr 160px; gap: 10px; align-items: center; margin: 8px 0; }
-    .row .two { grid-template-columns: 1fr 80px 1fr 80px; }
-    label { font-weight: 500; }
-    input[type="number"] { padding: 8px; border-radius: 10px; border: 1px solid color-mix(in srgb, CanvasText 20%, transparent); width: 100%; }
+    .row { display: grid; grid-template-columns: 1fr 180px; gap: 10px; align-items: center; margin: 8px 0; }
+    label { font-weight: 600; font-size: var(--label-size); }
+    input[type="number"], input[type="text"] {
+      padding: var(--input-pad);
+      border-radius: 10px;
+      border: 1px solid color-mix(in srgb, CanvasText 20%, transparent);
+      width: var(--input-width);
+      font-size: var(--input-size);
+      -webkit-appearance: none;
+      appearance: none;
+    }
     .muted { color: gray; font-size: .9rem; }
     .result { font-weight: 700; font-size: 1.15rem; }
     .warn { color: #b45d00; }
     .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .qty { display:flex; gap:8px; align-items:center; }
-    .qty input { width: 80px; }
     .toggle { display:flex; align-items:center; gap:8px; }
-    .btn { padding: 10px 12px; border-radius: 10px; border: 1px solid color-mix(in srgb, CanvasText 20%, transparent); background: color-mix(in srgb, CanvasText 12%, transparent); cursor:pointer; }
-    .cta { font-size: 1.25rem; padding: 12px 14px; }
-    footer { margin-top: 16px; font-size:.85rem; color: gray; }
   </style>
 </head>
 <body>
-  <h1>Precificador (PWA)</h1>
+  <h1>Precificador Markup</h1>
   <div class="card">
     <div class="toggle">
-      <input type="checkbox" id="divide2" checked>
-      <label for="divide2">Dividir TOTAL DE CUSTO por 2 (como na planilha)</label>
+      <input type="checkbox" id="divide2" checked aria-label="Dividir total por 2">
+      <label for="divide2">Dividir TOTAL DE CUSTO por 2</label>
     </div>
     <div id="items"></div>
     <div class="row">
-      <label>TOTAL DE CUSTO (B7)</label>
+      <label>TOTAL DE CUSTO</label>
       <div id="b7" class="result">R$ 0,00</div>
     </div>
   </div>
 
   <div class="card">
-    <div class="row"><label>MARGEM LUCRO (B8) %</label><input type="number" step="0.01" id="b8" placeholder="10 (para 10%)"></div>
-    <div class="row"><label>CUSTO FIXO / FRETE (B9) R$</label><input type="number" step="0.01" id="b9" placeholder="0,00"></div>
-    <div class="row"><label>IMPOSTO (B10) %</label><input type="number" step="0.01" id="b10" placeholder="10"></div>
-    <div class="row"><label>FIXO (B11) %</label><input type="number" step="0.01" id="b11" placeholder="2"></div>
-    <div class="row"><label>COMISSÃO (B12) %</label><input type="number" step="0.01" id="b12" placeholder="20"></div>
+    <div class="row"><label>MARGEM LUCRO %</label><input type="number" inputmode="decimal" step="0.01" id="b8" placeholder="10"></div>
+    <div class="row"><label>CUSTO FIXO / FRETE R$</label><input type="number" inputmode="decimal" step="0.01" id="b9" placeholder="0,00"></div>
+    <div class="row"><label>IMPOSTO %</label><input type="number" inputmode="decimal" step="0.01" id="b10" placeholder="10"></div>
+    <div class="row"><label>FIXO %</label><input type="number" inputmode="decimal" step="0.01" id="b11" placeholder="2"></div>
+    <div class="row"><label>COMISSÃO %</label><input type="number" inputmode="decimal" step="0.01" id="b12" placeholder="20"></div>
   </div>
 
   <div class="card">
     <div id="warn" class="warn muted" style="display:none;">⚠️ A soma dos percentuais (lucro + impostos + fixo + comissão) precisa ser menor que 100%.</div>
-    <div class="row"><label>VALOR ANÚNCIO (B13)</label><div id="b13" class="result">R$ 0,00</div></div>
-    <div class="row"><label>Margem (C8 = B13 × B8)</label><div id="c8">R$ 0,00</div></div>
-    <div class="row"><label>Comissão (C12 = B13 − B9 − C8 − B7)</label><div id="c12">R$ 0,00</div></div>
-    <button class="btn cta" id="save">Salvar valores (navegador)</button>
+    <div class="row"><label>VALOR ANÚNCIO</label><div id="b13" class="result">R$ 0,00</div></div>
+    <div class="row"><label>Margem de lucro</label><div id="c8">R$ 0,00</div></div>
+    <div class="row"><label>Comissão</label><div id="c12">R$ 0,00</div></div>
   </div>
 
-  <footer>
-    Funciona offline após instalar na tela inicial. Fórmulas: B7=(∑ B[i]×C[i])/2 · B13=(B7+B9)/(1−(B12+B11+B10+B8)) · C8=B13×B8 · C12=B13−B9−C8−B7
-  </footer>
-
   <script>
-    // Helpers
     const brl = v => v.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
-    const val = id => parseFloat(document.getElementById(id).value.replace(',', '.')) || 0;
+    const val = id => parseFloat(String(document.getElementById(id).value).replace(',', '.')) || 0;
+    const pct = id => { const raw = val(id); return (!isFinite(raw) ? 0 : (raw >= 1 ? raw/100 : raw)); };
 
-    // Percent parser: accepts 10 (10%) or 0.1 (10%)
-    const pct = id => {
-      const raw = val(id);
-      if (!isFinite(raw)) return 0;
-      return raw >= 1 ? raw / 100 : raw;
-    };
-
-    // Build items (6 linhas)
     const itemsDiv = document.getElementById('items');
     const itemInputs = [];
     for (let i=1; i<=6; i++) {
       const wrap = document.createElement('div');
       wrap.className = 'grid2';
       wrap.innerHTML = `
-        <div class="row"><label>CUSTO PRODUTO ${i} (B${i})</label><input type="number" step="0.01" id="b${i}" placeholder="0,00"></div>
-        <div class="row"><label>QTD (C${i})</label><input type="number" step="1" id="c${i}" value="1"></div>
+        <div class="row"><label>PRODUTO ${i}</label><input type="number" inputmode="decimal" step="0.01" id="b${i}" placeholder="0,00"></div>
+        <div class="row"><label>QTD</label><input type="number" inputmode="numeric" pattern="[0-9]*" step="1" id="c${i}" value="1"></div>
       `;
       itemsDiv.appendChild(wrap);
-      itemInputs.push(`b${i}`, `c${i}`);
+      itemInputs.push('b'+i, 'c'+i);
     }
 
     const ids = [...itemInputs, 'b8','b9','b10','b11','b12','divide2'];
     ids.forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.addEventListener('input', calc);
+      if (el) el.addEventListener('input', calc, {passive:true});
     });
     document.getElementById('divide2').addEventListener('change', calc);
-    document.getElementById('save').addEventListener('click', () => {
-      const data = {};
-      ids.forEach(id => {
-        const el = document.getElementById(id);
-        data[id] = (el.type === 'checkbox') ? el.checked : el.value;
-      });
-      localStorage.setItem('precificador', JSON.stringify(data));
-      alert('Valores salvos neste navegador.');
-    });
-
-    // Load saved
-    const saved = localStorage.getItem('precificador');
-    if (saved) {
-      const data = JSON.parse(saved);
-      Object.entries(data).forEach(([k,v])=>{
-        const el = document.getElementById(k);
-        if (!el) return;
-        if (el.type === 'checkbox') el.checked = !!v;
-        else el.value = v;
-      });
-    } else {
-      // defaults
-      document.getElementById('b8').value = 10;
-      document.getElementById('b10').value = 10;
-      document.getElementById('b11').value = 2;
-      document.getElementById('b12').value = 20;
-      document.getElementById('b9').value = 4.00;
-      document.getElementById('b1').value = 296.00;
-      document.getElementById('c1').value = 1;
-    }
 
     function calc() {
-      // B7
       let soma = 0;
       for (let i=1;i<=6;i++) {
         const bi = val('b'+i);
@@ -137,18 +103,12 @@
       const dividir2 = document.getElementById('divide2').checked;
       const b7 = dividir2 ? soma / 2 : soma;
 
-      // Percentuais
       const b8 = pct('b8'), b10 = pct('b10'), b11 = pct('b11'), b12 = pct('b12');
       const b9 = val('b9');
 
       const somaPct = b8 + b10 + b11 + b12;
       const denom = 1 - somaPct;
-      const warn = document.getElementById('warn');
-      if (denom <= 0) {
-        warn.style.display = 'block';
-      } else {
-        warn.style.display = 'none';
-      }
+      document.getElementById('warn').style.display = (denom <= 0) ? 'block' : 'none';
 
       const b13 = denom <= 0 ? 0 : (b7 + b9) / denom;
       const c8 = b13 * b8;
@@ -158,11 +118,30 @@
       document.getElementById('b13').textContent = brl(b13);
       document.getElementById('c8').textContent = brl(c8);
       document.getElementById('c12').textContent = brl(c12);
+
+      // Persistência automática
+      const data = {};
+      ids.forEach(id => {
+        const el = document.getElementById(id);
+        data[id] = (el?.type === 'checkbox') ? el.checked : el.value;
+      });
+      localStorage.setItem('precificador', JSON.stringify(data));
+    }
+
+    // Restaura dados salvos
+    const saved = localStorage.getItem('precificador');
+    if (saved) {
+      const data = JSON.parse(saved);
+      Object.entries(data).forEach(([k,v])=>{
+        const el = document.getElementById(k);
+        if (!el) return;
+        if (el.type === 'checkbox') el.checked = !!v;
+        else el.value = v;
+      });
     }
 
     calc();
 
-    // PWA SW register
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js');
