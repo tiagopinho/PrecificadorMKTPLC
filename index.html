@@ -26,6 +26,7 @@
       --input-bg: #2a2a2a;
       --input-border: #404040;
       --accent-green: #00ff88;
+      --accent-red: #ff3b30; /* Adicionado para o botão de reset */
     }
     
     html, body{ 
@@ -48,6 +49,15 @@
     .row{
       display:grid; grid-template-columns: 1fr 90px;
       gap:10px; align-items:center; margin:8px 0;
+    }
+
+    /* NOVA LINHA: Para o Valor Anúncio, dando mais espaço para o valor */
+    .row-big-result{
+        display:grid; 
+        grid-template-columns: 1fr 140px; 
+        gap:10px; 
+        align-items:center; 
+        margin:8px 0;
     }
 
     /* linhas de porcentagem (3 colunas): label | input | valor em R$ */
@@ -128,8 +138,11 @@
     }
     .result-big{
       font-weight:700; 
-      font-size:1.8rem; 
+      font-size:1.5rem; 
       color: var(--accent-green);
+      text-align:right; 
+      overflow-wrap: break-word; 
+      word-wrap: break-word; 
     }
     .warn{ color:#ff6b35; }
     .toggle{ 
@@ -156,6 +169,25 @@
       font-weight: 500;
       color: var(--text-color);
     }
+    
+    /* Novo botão de reset */
+    .reset-button {
+      background-color: var(--accent-red);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 15px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: block; /* Ocupa a largura total */
+      width: 100%;
+      margin-top: 12px;
+      transition: background-color 0.2s ease;
+    }
+    .reset-button:active {
+      background-color: #cc2e24; /* Um tom mais escuro ao clicar */
+    }
 
     @media (max-width:360px){
       .row4{
@@ -166,6 +198,7 @@
       .row4 input.qty  { width:55px; }
 
       .rowpct{ grid-template-columns: 1fr 66px 85px; }
+      .row-big-result{ grid-template-columns: 1fr 120px; } 
     }
   </style>
 </head>
@@ -184,6 +217,8 @@
       <label>TOTAL DE CUSTO</label>
       <div id="b7" class="result">R$ 0,00</div>
     </div>
+    
+    <button class="reset-button" onclick="resetProducts()">Zerar Produtos</button>
   </div>
 
   <div class="card">
@@ -216,7 +251,7 @@
 
   <div class="card">
     <div id="warn" class="warn muted" style="display:none;">⚠️ A soma dos percentuais (lucro + impostos + fixo + comissão) precisa ser menor que 100%.</div>
-    <div class="row">
+    <div class="row-big-result">
       <label>VALOR ANÚNCIO</label>
       <div id="b13" class="result-big">R$ 0,00</div>
     </div>
@@ -231,14 +266,14 @@
     // Armazena todos os IDs de custo ('bX') e quantidade ('cX')
     let PRODUCTS = [];
     // Contador para o próximo produto a ser criado
-    let productCounter = 0; // Começamos em 0 para o primeiro produto ser o '1'
+    let productCounter = 0; 
     // IDs fixos (porcentagens e checkbox)
     const FIXED_IDS = ['b8','b9','b10','b11','b12','divide2'];
     const PERSIST_KEY = 'precificador';
 
     // Função para criar a linha de um novo produto
     function createProductRow(index, costValue = '', qtyValue = 1, isVisible = false) {
-      productCounter = index; // Atualiza o contador para o índice atual
+      productCounter = index; 
       const bId = 'b' + index;
       const cId = 'c' + index;
 
@@ -267,44 +302,54 @@
       costInput.addEventListener('input', handleProductInput, { passive:true });
       qtyInput.addEventListener('input', calc, { passive:true });
 
-      return costInput.parentElement; // Retorna o elemento wrap para controle de visibilidade
+      return costInput.parentElement;
     }
 
     // Função que gerencia a criação do próximo produto e a visibilidade
     function handleProductInput(e) {
-      calc(); // Recalcula sempre que um campo muda
+      calc(); 
 
       const currentInput = e.target;
       const currentIndex = parseInt(currentInput.id.replace('b', ''));
-      const currentValue = parseFloat(currentInput.value);
+      const currentValue = val(currentInput.id); 
 
       // 1. Lógica para CRIAR e MOSTRAR o próximo produto
       if (currentValue > 0 && currentIndex === PRODUCTS.length) {
           const nextIndex = productCounter + 1;
-          const newRow = createProductRow(nextIndex, '', 1, true); // Cria e já define como visível
+          createProductRow(nextIndex, '', 1, true); 
       }
       
-      // 2. Lógica para LIMPAR e ESCONDER linhas subsequentes (se o campo atual for esvaziado)
+      // 2. Lógica para LIMPAR e ESCONDER linhas subsequentes
       if (currentValue === 0) {
-          // Percorre de trás para frente
           for (let i = PRODUCTS.length; i > currentIndex; i--) {
               const product = PRODUCTS[i - 1];
-              const costInput = document.getElementById(product.bId);
-              const row = document.getElementById('product-row-' + i);
-              
-              // Se o produto atual na iteração estiver vazio, ele é removido
-              if (parseFloat(costInput.value) === 0) {
+              // Usamos val() para verificar corretamente se o custo está zerado
+              if (val(product.bId) === 0) {
+                  const row = document.getElementById('product-row-' + i);
                   itemsDiv.removeChild(row);
                   PRODUCTS.pop(); 
                   productCounter--;
               } else {
-                  // Se encontrar um valor preenchido, para a remoção
                   break;
               }
           }
       }
       
       saveData();
+    }
+    
+    // NOVO: Função para zerar o preenchimento dos produtos
+    function resetProducts() {
+        // Remove todas as linhas de produto, exceto a primeira (que será recriada)
+        itemsDiv.innerHTML = '';
+        PRODUCTS = [];
+        productCounter = 0;
+        
+        // Recria o primeiro produto vazio e visível
+        createProductRow(1, '', 1, true);
+        
+        // Garante que os totais sejam atualizados e os dados salvos
+        calc(); 
     }
     
     // Adiciona listeners para os campos fixos
@@ -317,7 +362,6 @@
     // Lógica de cálculo
     function calc(){
       let soma = 0;
-      // Itera sobre o array PRODUCTS para somar todos os custos
       PRODUCTS.forEach(product => {
         const bi = val(product.bId);
         const ci = parseFloat(document.getElementById(product.cId).value) || 0;
@@ -375,7 +419,6 @@
     function restoreData() {
         const saved = localStorage.getItem(PERSIST_KEY);
         if (!saved) {
-            // Se não houver nada salvo, cria apenas o primeiro produto
             createProductRow(1, '', 1, true);
             return;
         }
@@ -389,24 +432,20 @@
             
             data.products.forEach((p, index) => {
                 const productIndex = index + 1;
-                // Cria todos os produtos salvos
                 createProductRow(productIndex, p.cost, p.qty, true);
                 
-                // Se for o último produto salvo e ele tiver valor, cria o próximo produto vazio
                 if (index === data.products.length - 1 && parseFloat(p.cost) > 0) {
                     createProductRow(productIndex + 1, '', 1, true);
                 }
             });
-            // Garante que haja pelo menos um campo vazio visível para entrada
-            if (PRODUCTS.length === 0 || parseFloat(data.products[data.products.length-1].cost) === 0) {
+            if (PRODUCTS.length === 0 || val(PRODUCTS[PRODUCTS.length-1].bId) === 0) {
                  createProductRow(Math.max(1, productCounter + 1), '', 1, true);
             }
         } else {
-            // Se o array de produtos estiver vazio, cria o primeiro
             createProductRow(1, '', 1, true);
         }
         
-        // 2. Restaura campos fixos (porcentagens e checkbox)
+        // 2. Restaura campos fixos
         if (data.fixed) {
             Object.entries(data.fixed).forEach(([k, v]) => {
                 const el = document.getElementById(k);
@@ -419,7 +458,6 @@
 
     // Processo de inicialização
     restoreData();
-    // Garante que o cálculo seja executado na primeira carga, após restauração
     calc();
 
     // PWA
