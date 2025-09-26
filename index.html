@@ -27,11 +27,14 @@
 
     /* linha dos produtos: label | preço | "QTD" | campo qtd (compacto) */
     .row4{
-      display: grid;
-      grid-template-columns: minmax(140px, 1fr) 80px 40px 60px; /* label | preço | "QTD" | qtd */
-      column-gap: 8px;             /* aproxima o campo do label */
-      align-items: center;
-      margin: 8px 0;
+      display: grid; 
+      grid-template-columns: 1fr 70px 40px 55px; 
+      gap: 6px; 
+      align-items: center; 
+      margin: 8px 0; 
+    }
+    .row4 label:nth-child(3) { 
+    text-align: center; 
     }
 
     label { font-weight: 600; font-size: var(--label-size); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
