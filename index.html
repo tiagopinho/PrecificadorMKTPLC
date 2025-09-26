@@ -228,41 +228,102 @@
     const pct = id => { const raw = val(id); return (!isFinite(raw) ? 0 : (raw >= 1 ? raw/100 : raw)); };
 
     const itemsDiv = document.getElementById('items');
-    const itemInputs = [];
-    itemsDiv.innerHTML = '';
+    // Armazena todos os IDs de custo ('bX') e quantidade ('cX')
+    let PRODUCTS = [];
+    // Contador para o próximo produto a ser criado
+    let productCounter = 0; // Começamos em 0 para o primeiro produto ser o '1'
+    // IDs fixos (porcentagens e checkbox)
+    const FIXED_IDS = ['b8','b9','b10','b11','b12','divide2'];
+    const PERSIST_KEY = 'precificador';
 
-    // Linha de produto: PRODUTO | valor | QTD | quantidade
-    for (let i = 1; i <= 6; i++) {
+    // Função para criar a linha de um novo produto
+    function createProductRow(index, costValue = '', qtyValue = 1, isVisible = false) {
+      productCounter = index; // Atualiza o contador para o índice atual
+      const bId = 'b' + index;
+      const cId = 'c' + index;
+
       const wrap = document.createElement('div');
-      wrap.className = 'row4';
+      wrap.className = 'row4 product-row';
+      wrap.id = 'product-row-' + index;
+      wrap.style.display = isVisible ? 'grid' : 'none';
+
       wrap.innerHTML = `
-        <label>PRODUTO ${i}</label>
+        <label>PRODUTO ${index}</label>
         <span></span>
-        <input class="money" type="number" inputmode="decimal" step="0.01" id="b${i}" placeholder="0,00">
+        <input class="money" type="number" inputmode="decimal" step="0.01" id="${bId}" placeholder="0,00" value="${costValue}">
         <span></span>
         <span class="qtd-label">QTD</span>
         <span></span>
-        <input class="qty" type="number" inputmode="numeric" pattern="[0-9]*" step="1" id="c${i}" value="1">
+        <input class="qty" type="number" inputmode="numeric" pattern="[0-9]*" step="1" id="${cId}" value="${qtyValue}">
       `;
       itemsDiv.appendChild(wrap);
-      itemInputs.push('b' + i, 'c' + i);
+      
+      PRODUCTS.push({ bId, cId });
+
+      // Adicionar listeners
+      const costInput = document.getElementById(bId);
+      const qtyInput = document.getElementById(cId);
+
+      costInput.addEventListener('input', handleProductInput, { passive:true });
+      qtyInput.addEventListener('input', calc, { passive:true });
+
+      return costInput.parentElement; // Retorna o elemento wrap para controle de visibilidade
     }
 
-    const ids = [...itemInputs, 'b8','b9','b10','b11','b12','divide2'];
+    // Função que gerencia a criação do próximo produto e a visibilidade
+    function handleProductInput(e) {
+      calc(); // Recalcula sempre que um campo muda
 
-    ids.forEach(id => {
+      const currentInput = e.target;
+      const currentIndex = parseInt(currentInput.id.replace('b', ''));
+      const currentValue = parseFloat(currentInput.value);
+
+      // 1. Lógica para CRIAR e MOSTRAR o próximo produto
+      if (currentValue > 0 && currentIndex === PRODUCTS.length) {
+          const nextIndex = productCounter + 1;
+          const newRow = createProductRow(nextIndex, '', 1, true); // Cria e já define como visível
+      }
+      
+      // 2. Lógica para LIMPAR e ESCONDER linhas subsequentes (se o campo atual for esvaziado)
+      if (currentValue === 0) {
+          // Percorre de trás para frente
+          for (let i = PRODUCTS.length; i > currentIndex; i--) {
+              const product = PRODUCTS[i - 1];
+              const costInput = document.getElementById(product.bId);
+              const row = document.getElementById('product-row-' + i);
+              
+              // Se o produto atual na iteração estiver vazio, ele é removido
+              if (parseFloat(costInput.value) === 0) {
+                  itemsDiv.removeChild(row);
+                  PRODUCTS.pop(); 
+                  productCounter--;
+              } else {
+                  // Se encontrar um valor preenchido, para a remoção
+                  break;
+              }
+          }
+      }
+      
+      saveData();
+    }
+    
+    // Adiciona listeners para os campos fixos
+    FIXED_IDS.forEach(id => {
       const el = document.getElementById(id);
       if (el) el.addEventListener('input', calc, { passive:true });
     });
     document.getElementById('divide2').addEventListener('change', calc);
 
+    // Lógica de cálculo
     function calc(){
       let soma = 0;
-      for (let i = 1; i <= 6; i++) {
-        const bi = val('b' + i);
-        const ci = parseFloat(document.getElementById('c' + i).value) || 0;
+      // Itera sobre o array PRODUCTS para somar todos os custos
+      PRODUCTS.forEach(product => {
+        const bi = val(product.bId);
+        const ci = parseFloat(document.getElementById(product.cId).value) || 0;
         soma += bi * ci;
-      }
+      });
+      
       const dividir2 = document.getElementById('divide2').checked;
       const b7 = dividir2 ? soma / 2 : soma;
 
@@ -281,40 +342,84 @@
       const fixoR     = b13 * b11;
       const comissaoR = b13 * b12;
 
-      // também mantemos os totais detalhados no card final
-      const c8  = margemR;
-      const c12 = comissaoR;
-
       document.getElementById('b7').textContent  = brl(b7);
       document.getElementById('b13').textContent = brl(b13);
 
-      // valores à direita das linhas de porcentagem
       document.getElementById('r_b8').textContent  = brl(margemR);
       document.getElementById('r_b10').textContent = brl(impostoR);
       document.getElementById('r_b11').textContent = brl(fixoR);
       document.getElementById('r_b12').textContent = brl(comissaoR);
 
-      // Persistência
-      const data = {};
-      ids.forEach(id => {
-        const el = document.getElementById(id);
-        data[id] = (el?.type === 'checkbox') ? el.checked : el.value;
-      });
-      localStorage.setItem('precificador', JSON.stringify(data));
+      saveData();
+    }
+    
+    // Função para persistir dados no localStorage
+    function saveData() {
+        const data = {
+            products: PRODUCTS.map(p => ({
+                bId: p.bId,
+                cId: p.cId,
+                cost: document.getElementById(p.bId).value,
+                qty: document.getElementById(p.cId).value
+            })),
+            fixed: {}
+        };
+        FIXED_IDS.forEach(id => {
+            const el = document.getElementById(id);
+            data.fixed[id] = (el?.type === 'checkbox') ? el.checked : el.value;
+        });
+        localStorage.setItem(PERSIST_KEY, JSON.stringify(data));
     }
 
-    // Restaura dados salvos
-    const saved = localStorage.getItem('precificador');
-    if (saved) {
-      const data = JSON.parse(saved);
-      Object.entries(data).forEach(([k, v]) => {
-        const el = document.getElementById(k);
-        if (!el) return;
-        if (el.type === 'checkbox') el.checked = !!v;
-        else el.value = v;
-      });
+    // Função para restaurar dados salvos
+    function restoreData() {
+        const saved = localStorage.getItem(PERSIST_KEY);
+        if (!saved) {
+            // Se não houver nada salvo, cria apenas o primeiro produto
+            createProductRow(1, '', 1, true);
+            return;
+        }
+        
+        const data = JSON.parse(saved);
+        
+        // 1. Restaura produtos
+        if (data.products && data.products.length > 0) {
+            itemsDiv.innerHTML = '';
+            PRODUCTS = [];
+            
+            data.products.forEach((p, index) => {
+                const productIndex = index + 1;
+                // Cria todos os produtos salvos
+                createProductRow(productIndex, p.cost, p.qty, true);
+                
+                // Se for o último produto salvo e ele tiver valor, cria o próximo produto vazio
+                if (index === data.products.length - 1 && parseFloat(p.cost) > 0) {
+                    createProductRow(productIndex + 1, '', 1, true);
+                }
+            });
+            // Garante que haja pelo menos um campo vazio visível para entrada
+            if (PRODUCTS.length === 0 || parseFloat(data.products[data.products.length-1].cost) === 0) {
+                 createProductRow(Math.max(1, productCounter + 1), '', 1, true);
+            }
+        } else {
+            // Se o array de produtos estiver vazio, cria o primeiro
+            createProductRow(1, '', 1, true);
+        }
+        
+        // 2. Restaura campos fixos (porcentagens e checkbox)
+        if (data.fixed) {
+            Object.entries(data.fixed).forEach(([k, v]) => {
+                const el = document.getElementById(k);
+                if (!el) return;
+                if (el.type === 'checkbox') el.checked = !!v;
+                else el.value = v;
+            });
+        }
     }
 
+    // Processo de inicialização
+    restoreData();
+    // Garante que o cálculo seja executado na primeira carga, após restauração
     calc();
 
     // PWA
