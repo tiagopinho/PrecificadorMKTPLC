@@ -13,7 +13,7 @@
       color-scheme: light dark;
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
       --label-size: 15px;
-      --input-size: 16px; /* >=16px evita zoom no iPhone */
+      --input-size: 16px;   /* >=16px evita zoom no iPhone */
       --input-pad: 10px;
       --input-width: 100%;
     }
@@ -25,17 +25,17 @@
     /* linhas padrão: label | campo (para % e frete) */
     .row { display: grid; grid-template-columns: 1fr 70px; gap: 10px; align-items: center; margin: 8px 0; }
 
-    /* linha dos produtos: label | preço | "QTD" | campo qtd */
-    .row3{
+    /* linha dos produtos: label | preço | "QTD" | campo qtd (compacto) */
+    .row4{
       display: grid;
-      grid-template-columns: 1fr 100px 40px 70px; /* ajuste se quiser */
-      gap: 6px; /* aproxima os campos do label */
+      grid-template-columns: minmax(140px, 1fr) 80px 40px 60px; /* label | preço | "QTD" | qtd */
+      column-gap: 8px;             /* aproxima o campo do label */
       align-items: center;
       margin: 8px 0;
     }
 
-    label { font-weight: 600; font-size: var(--label-size); white-space: nowrap; }
-    .qtd-label{ white-space: nowrap; text-align: center; font-weight: 600; }
+    label { font-weight: 600; font-size: var(--label-size); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .qtd-label { justify-self: center; font-weight: 600; white-space: nowrap; }
 
     input[type="number"], input[type="text"] {
       padding: var(--input-pad);
@@ -46,13 +46,14 @@
       -webkit-appearance: none;
       appearance: none;
     }
+
     .muted { color: gray; font-size: .9rem; }
     .result { font-weight: 700; font-size: 1.15rem; }
     .warn { color: #b45d00; }
     .toggle { display:flex; align-items:center; gap:8px; }
 
     @media (max-width: 360px){
-      .row3 { grid-template-columns: 1fr 90px 36px 64px; }
+      .row4 { grid-template-columns: minmax(120px, 1fr) 72px 36px 56px; } /* aperta em telas menores */
     }
   </style>
 </head>
@@ -97,7 +98,7 @@
     // UMA LINHA POR PRODUTO: label | preço | "QTD" | campo qtd
     for (let i=1; i<=6; i++) {
       const wrap = document.createElement('div');
-      wrap.className = 'row3';
+      wrap.className = 'row4';
       wrap.innerHTML = `
         <label>PRODUTO ${i}</label>
         <input class="money" type="number" inputmode="decimal" step="0.01" id="b${i}" placeholder="0,00">
