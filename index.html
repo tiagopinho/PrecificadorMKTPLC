@@ -9,65 +9,177 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <title>Precificador Markup</title>
   <style>
-    :root {
-      color-scheme: light dark;
+    :root{
+      color-scheme: dark;
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
       --label-size: 15px;
-      --input-size: 16px;   /* >=16px evita zoom no iPhone */
+      --input-size: 16px;
       --input-pad: 10px;
       --input-width: 100%;
+      
+      /* Tema escuro */
+      --bg-body: #000000;
+      --bg-card: #1a1a1a;
+      --border-color: #333333;
+      --text-color: #ffffff;
+      --text-muted: #888888;
+      --input-bg: #2a2a2a;
+      --input-border: #404040;
+      --accent-green: #00ff88;
     }
-    html, body { margin: 0; padding: 0; }
-    body { padding: 16px; -webkit-text-size-adjust: 100%; }
-    h1 { margin: 0 0 12px 0; font-size: 1.4rem; }
-    .card { border: 1px solid color-mix(in srgb, CanvasText 20%, transparent); border-radius: 14px; padding: 14px; margin-bottom: 14px; }
+    
+    html, body{ 
+      margin:0; padding:0; 
+      background-color: var(--bg-body);
+      color: var(--text-color);
+    }
+    body{ padding:12px; -webkit-text-size-adjust:100%; }
+    h1{ margin:0 0 16px 0; font-size:1.4rem; color: var(--text-color); }
+    
+    .card{
+      background-color: var(--bg-card);
+      border:1px solid var(--border-color);
+      border-radius:12px; 
+      padding:14px; 
+      margin-bottom:12px;
+    }
 
-    /* linhas padrão: label | campo (para % e frete) */
-    .row { display: grid; grid-template-columns: 1fr 70px; gap: 10px; align-items: center; margin: 8px 0; }
+    /* linhas padrão (2 colunas): label | input */
+    .row{
+      display:grid; grid-template-columns: 1fr 90px;
+      gap:10px; align-items:center; margin:8px 0;
+    }
 
-    /* linha dos produtos: label | preço | "QTD" | campo qtd (compacto) */
+    /* linhas de porcentagem (3 colunas): label | input | valor em R$ */
+    .rowpct{
+      display:grid; grid-template-columns: 1fr 70px 90px;
+      gap:10px; align-items:center; margin:8px 0;
+    }
+    .result-right{ 
+      text-align:right; 
+      font-weight:600; 
+      color: var(--text-color);
+      font-size: 14px;
+    }
+
+    /* linha do produto */
     .row4{
-      display: grid; 
-      grid-template-columns: 1fr 70px 40px 55px; 
-      gap: 6px; 
-      align-items: center; 
-      margin: 8px 0; 
-    }
-    .row4 label:nth-child(3) { 
-    text-align: center; 
-    }
-
-    label { font-weight: 600; font-size: var(--label-size); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .qtd-label { justify-self: center; font-weight: 600; white-space: nowrap; }
-
-    input[type="number"], input[type="text"] {
-      padding: var(--input-pad);
-      border-radius: 10px;
-      border: 1px solid color-mix(in srgb, CanvasText 20%, transparent);
-      width: var(--input-width);
-      font-size: var(--input-size);
-      -webkit-appearance: none;
-      appearance: none;
+      display:grid;
+      grid-template-columns:
+        minmax(120px, 1fr)
+        10px
+        80px
+        10px
+        32px
+        10px
+        60px;
+      align-items:center;
+      margin:8px 0;
     }
 
-    .muted { color: gray; font-size: .9rem; }
-    .result { font-weight: 700; font-size: 1.15rem; }
-    .warn { color: #b45d00; }
-    .toggle { display:flex; align-items:center; gap:8px; }
+    .row4 > label{
+      font-weight:600; 
+      font-size:var(--label-size);
+      white-space:nowrap; 
+      overflow:hidden; 
+      text-overflow:ellipsis;
+      color: var(--text-color);
+    }
+    .qtd-label{ 
+      white-space:nowrap; 
+      text-align:center; 
+      font-weight:600; 
+      color: var(--text-color);
+      font-size: 14px;
+      min-width: 32px;
+    }
 
-    @media (max-width: 360px){
-      .row4 { grid-template-columns: minmax(120px, 1fr) 72px 36px 56px; } /* aperta em telas menores */
+    input[type="number"], input[type="text"]{
+      padding:var(--input-pad);
+      border-radius:8px;
+      border:1px solid var(--input-border);
+      background-color: var(--input-bg);
+      color: var(--text-color);
+      font-size:var(--input-size);
+      -webkit-appearance:none; 
+      appearance:none;
+      width:var(--input-width);
+      box-sizing:border-box;
+    }
+    
+    input[type="number"]:focus, input[type="text"]:focus {
+      outline: none;
+      border-color: #666;
+    }
+    
+    input::placeholder {
+      color: var(--text-muted);
+    }
+    
+    /* garantem as larguras definidas na grid */
+    .row4 input.money{ width:80px; }
+    .row4 input.qty  { width:60px; }
+
+    .muted{ color: var(--text-muted); font-size:.9rem; }
+    .result{ 
+      font-weight:700; 
+      font-size:1.15rem; 
+      color: var(--text-color);
+    }
+    .result-big{
+      font-weight:700; 
+      font-size:1.8rem; 
+      color: var(--accent-green);
+    }
+    .warn{ color:#ff6b35; }
+    .toggle{ 
+      display:flex; 
+      align-items:center; 
+      gap:8px; 
+      margin-bottom: 12px;
+    }
+    
+    .toggle label {
+      color: var(--text-color);
+      font-size: 15px;
+    }
+    
+    input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent-green);
+    }
+
+    /* Labels mais compactos */
+    .compact-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-color);
+    }
+
+    @media (max-width:360px){
+      .row4{
+        grid-template-columns:
+          minmax(110px,1fr) 6px 70px 6px max-content 6px 55px;
+      }
+      .row4 input.money{ width:70px; }
+      .row4 input.qty  { width:55px; }
+
+      .rowpct{ grid-template-columns: 1fr 66px 85px; }
     }
   </style>
 </head>
 <body>
   <h1>Precificador Markup</h1>
+
   <div class="card">
     <div class="toggle">
       <input type="checkbox" id="divide2" checked aria-label="Dividir total por 2">
       <label for="divide2">Dividir TOTAL DE CUSTO por 2</label>
     </div>
+
     <div id="items"></div>
+
     <div class="row">
       <label>TOTAL DE CUSTO</label>
       <div id="b7" class="result">R$ 0,00</div>
@@ -75,22 +187,43 @@
   </div>
 
   <div class="card">
-    <div class="row"><label>MARGEM LUCRO %</label><input type="number" inputmode="decimal" step="0.01" id="b8" placeholder="10"></div>
-    <div class="row"><label>CUSTO FIXO / FRETE R$</label><input type="number" inputmode="decimal" step="0.01" id="b9" placeholder="0,00"></div>
-    <div class="row"><label>IMPOSTO %</label><input type="number" inputmode="decimal" step="0.01" id="b10" placeholder="10"></div>
-    <div class="row"><label>FIXO %</label><input type="number" inputmode="decimal" step="0.01" id="b11" placeholder="2"></div>
-    <div class="row"><label>COMISSÃO %</label><input type="number" inputmode="decimal" step="0.01" id="b12" placeholder="20"></div>
+    <div class="rowpct">
+      <label class="compact-label">MARGEM LUCRO</label>
+      <input type="number" inputmode="decimal" step="0.01" id="b8" placeholder="%">
+      <div id="r_b8" class="result-right">R$ 0,00</div>
+    </div>
+    <div class="rowpct">
+      <label class="compact-label">CUSTO FIXO / FRETE</label>
+      <input type="number" inputmode="decimal" step="0.01" id="b9" placeholder="R$">
+      <div></div>
+    </div>
+    <div class="rowpct">
+      <label class="compact-label">IMPOSTO</label>
+      <input type="number" inputmode="decimal" step="0.01" id="b10" placeholder="%">
+      <div id="r_b10" class="result-right">R$ 0,00</div>
+    </div>
+    <div class="rowpct">
+      <label class="compact-label">FIXO</label>
+      <input type="number" inputmode="decimal" step="0.01" id="b11" placeholder="%">
+      <div id="r_b11" class="result-right">R$ 0,00</div>
+    </div>
+    <div class="rowpct">
+      <label class="compact-label">COMISSÃO</label>
+      <input type="number" inputmode="decimal" step="0.01" id="b12" placeholder="%">
+      <div id="r_b12" class="result-right">R$ 0,00</div>
+    </div>
   </div>
 
   <div class="card">
     <div id="warn" class="warn muted" style="display:none;">⚠️ A soma dos percentuais (lucro + impostos + fixo + comissão) precisa ser menor que 100%.</div>
-    <div class="row"><label>VALOR ANÚNCIO</label><div id="b13" class="result">R$ 0,00</div></div>
-    <div class="row"><label>Margem de lucro</label><div id="c8">R$ 0,00</div></div>
-    <div class="row"><label>Comissão</label><div id="c12">R$ 0,00</div></div>
+    <div class="row">
+      <label>VALOR ANÚNCIO</label>
+      <div id="b13" class="result-big">R$ 0,00</div>
+    </div>
   </div>
 
   <script>
-    const brl = v => v.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+    const brl = v => v.toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
     const val = id => parseFloat(String(document.getElementById(id).value).replace(',', '.')) || 0;
     const pct = id => { const raw = val(id); return (!isFinite(raw) ? 0 : (raw >= 1 ? raw/100 : raw)); };
 
@@ -98,32 +231,36 @@
     const itemInputs = [];
     itemsDiv.innerHTML = '';
 
-    // UMA LINHA POR PRODUTO: label | preço | "QTD" | campo qtd
-    for (let i=1; i<=6; i++) {
+    // Linha de produto: PRODUTO | valor | QTD | quantidade
+    for (let i = 1; i <= 6; i++) {
       const wrap = document.createElement('div');
       wrap.className = 'row4';
       wrap.innerHTML = `
         <label>PRODUTO ${i}</label>
+        <span></span>
         <input class="money" type="number" inputmode="decimal" step="0.01" id="b${i}" placeholder="0,00">
+        <span></span>
         <span class="qtd-label">QTD</span>
-        <input class="qty" type="number" inputmode="numeric" pattern="[0-9]*" step="1" id="c${i}" value="1" aria-label="Quantidade do produto ${i}">
+        <span></span>
+        <input class="qty" type="number" inputmode="numeric" pattern="[0-9]*" step="1" id="c${i}" value="1">
       `;
       itemsDiv.appendChild(wrap);
-      itemInputs.push('b'+i, 'c'+i);
+      itemInputs.push('b' + i, 'c' + i);
     }
 
     const ids = [...itemInputs, 'b8','b9','b10','b11','b12','divide2'];
+
     ids.forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.addEventListener('input', calc, {passive:true});
+      if (el) el.addEventListener('input', calc, { passive:true });
     });
     document.getElementById('divide2').addEventListener('change', calc);
 
-    function calc() {
+    function calc(){
       let soma = 0;
-      for (let i=1;i<=6;i++) {
-        const bi = val('b'+i);
-        const ci = parseFloat(document.getElementById('c'+i).value) || 0;
+      for (let i = 1; i <= 6; i++) {
+        const bi = val('b' + i);
+        const ci = parseFloat(document.getElementById('c' + i).value) || 0;
         soma += bi * ci;
       }
       const dividir2 = document.getElementById('divide2').checked;
@@ -137,15 +274,27 @@
       document.getElementById('warn').style.display = (denom <= 0) ? 'block' : 'none';
 
       const b13 = denom <= 0 ? 0 : (b7 + b9) / denom;
-      const c8 = b13 * b8;
-      const c12 = b13 - b9 - c8 - b7;
 
-      document.getElementById('b7').textContent = brl(b7);
+      // valores em R$ derivados das porcentagens
+      const margemR   = b13 * b8;
+      const impostoR  = b13 * b10;
+      const fixoR     = b13 * b11;
+      const comissaoR = b13 * b12;
+
+      // também mantemos os totais detalhados no card final
+      const c8  = margemR;
+      const c12 = comissaoR;
+
+      document.getElementById('b7').textContent  = brl(b7);
       document.getElementById('b13').textContent = brl(b13);
-      document.getElementById('c8').textContent = brl(c8);
-      document.getElementById('c12').textContent = brl(c12);
 
-      // persistência automática
+      // valores à direita das linhas de porcentagem
+      document.getElementById('r_b8').textContent  = brl(margemR);
+      document.getElementById('r_b10').textContent = brl(impostoR);
+      document.getElementById('r_b11').textContent = brl(fixoR);
+      document.getElementById('r_b12').textContent = brl(comissaoR);
+
+      // Persistência
       const data = {};
       ids.forEach(id => {
         const el = document.getElementById(id);
@@ -154,11 +303,11 @@
       localStorage.setItem('precificador', JSON.stringify(data));
     }
 
-    // restaura dados salvos
+    // Restaura dados salvos
     const saved = localStorage.getItem('precificador');
     if (saved) {
       const data = JSON.parse(saved);
-      Object.entries(data).forEach(([k,v])=>{
+      Object.entries(data).forEach(([k, v]) => {
         const el = document.getElementById(k);
         if (!el) return;
         if (el.type === 'checkbox') el.checked = !!v;
@@ -168,6 +317,7 @@
 
     calc();
 
+    // PWA
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js');
