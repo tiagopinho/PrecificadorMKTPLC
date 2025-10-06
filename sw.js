@@ -1,3 +1,32 @@
+// sw.js — v7 (HTML network-first + assets stale-while-revalidate)
+const CACHE_HTML   = 'precificador-html-v7';
+const CACHE_ASSETS = 'precificador-assets-v7';
+const ASSETS = [
+  './',
+  './index.html',
+  './manifest.webmanifest',
+  './icons/icon-192.png',
+  './icons/icon-512.png'
+];
+
+// Instala e pré-cacheia assets estáticos
+self.addEventListener('install', (e) => {
+  self.skipWaiting();
+  e.waitUntil(caches.open(CACHE_ASSETS).then((c) => c.addAll(ASSETS)));
+});
+
+// Ativa e limpa caches antigos
+self.addEventListener('activate', (e) => {
+  e.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.map(k => (
+      k === CACHE_HTML || k === CACHE_ASSETS ? Promise.resolve() : caches.delete(k)
+    )));
+    await self.clients.claim();
+  })());
+});
+
+// Estratégias de fetch
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   const accept = req.headers.get('accept') || '';
