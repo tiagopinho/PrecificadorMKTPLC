@@ -26,7 +26,7 @@
       --input-bg: #2a2a2a;
       --input-border: #404040;
       --accent-green: #00ff88;
-      --accent-red: #ff3b30; /* Adicionado para o botão de reset */
+      --accent-red: #ff3b30;
     }
     
     html, body{ 
@@ -45,13 +45,11 @@
       margin-bottom:12px;
     }
 
-    /* linhas padrão (2 colunas): label | input */
     .row{
       display:grid; grid-template-columns: 1fr 90px;
       gap:10px; align-items:center; margin:8px 0;
     }
 
-    /* NOVA LINHA: Para o Valor Anúncio, dando mais espaço para o valor */
     .row-big-result{
         display:grid; 
         grid-template-columns: 1fr 140px; 
@@ -60,7 +58,6 @@
         margin:8px 0;
     }
 
-    /* linhas de porcentagem (3 colunas): label | input | valor em R$ */
     .rowpct{
       display:grid; grid-template-columns: 1fr 70px 90px;
       gap:10px; align-items:center; margin:8px 0;
@@ -72,7 +69,6 @@
       font-size: 14px;
     }
 
-    /* linha do produto */
     .row4{
       display:grid;
       grid-template-columns:
@@ -126,7 +122,6 @@
       color: var(--text-muted);
     }
     
-    /* garantem as larguras definidas na grid */
     .row4 input.money{ width:80px; }
     .row4 input.qty  { width:60px; }
 
@@ -163,14 +158,12 @@
       accent-color: var(--accent-green);
     }
 
-    /* Labels mais compactos */
     .compact-label {
       font-size: 14px;
       font-weight: 500;
       color: var(--text-color);
     }
     
-    /* Novo botão de reset */
     .reset-button {
       background-color: var(--accent-red);
       color: white;
@@ -180,13 +173,13 @@
       font-size: 1rem;
       font-weight: 600;
       cursor: pointer;
-      display: block; /* Ocupa a largura total */
+      display: block;
       width: 100%;
       margin-top: 12px;
       transition: background-color 0.2s ease;
     }
     .reset-button:active {
-      background-color: #cc2e24; /* Um tom mais escuro ao clicar */
+      background-color: #cc2e24;
     }
 
     @media (max-width:360px){
@@ -233,6 +226,11 @@
       <div></div>
     </div>
     <div class="rowpct">
+      <label class="compact-label">EMBALAGEM (R$)</label>
+      <input type="number" inputmode="decimal" step="0.01" id="b9b" placeholder="R$">
+      <div></div>
+    </div>
+    <div class="rowpct">
       <label class="compact-label">IMPOSTO (%)</label>
       <input type="number" inputmode="decimal" step="0.01" id="b10" placeholder="%">
       <div id="r_b10" class="result-right">R$ 0,00</div>
@@ -263,15 +261,11 @@
     const pct = id => { const raw = val(id); return (!isFinite(raw) ? 0 : (raw >= 1 ? raw/100 : raw)); };
 
     const itemsDiv = document.getElementById('items');
-    // Armazena todos os IDs de custo ('bX') e quantidade ('cX')
     let PRODUCTS = [];
-    // Contador para o próximo produto a ser criado
     let productCounter = 0; 
-    // IDs fixos (porcentagens e checkbox)
-    const FIXED_IDS = ['b8','b9','b10','b11','b12','divide2'];
+    const FIXED_IDS = ['b8','b9','b9b','b10','b11','b12','divide2']; // Adicionado b9b
     const PERSIST_KEY = 'precificador';
 
-    // Função para criar a linha de um novo produto
     function createProductRow(index, costValue = '', qtyValue = 1, isVisible = false) {
       productCounter = index; 
       const bId = 'b' + index;
@@ -295,7 +289,6 @@
       
       PRODUCTS.push({ bId, cId });
 
-      // Adicionar listeners
       const costInput = document.getElementById(bId);
       const qtyInput = document.getElementById(cId);
 
@@ -305,7 +298,6 @@
       return costInput.parentElement;
     }
 
-    // Função que gerencia a criação do próximo produto e a visibilidade
     function handleProductInput(e) {
       calc(); 
 
@@ -313,17 +305,14 @@
       const currentIndex = parseInt(currentInput.id.replace('b', ''));
       const currentValue = val(currentInput.id); 
 
-      // 1. Lógica para CRIAR e MOSTRAR o próximo produto
       if (currentValue > 0 && currentIndex === PRODUCTS.length) {
           const nextIndex = productCounter + 1;
           createProductRow(nextIndex, '', 1, true); 
       }
       
-      // 2. Lógica para LIMPAR e ESCONDER linhas subsequentes
       if (currentValue === 0) {
           for (let i = PRODUCTS.length; i > currentIndex; i--) {
               const product = PRODUCTS[i - 1];
-              // Usamos val() para verificar corretamente se o custo está zerado
               if (val(product.bId) === 0) {
                   const row = document.getElementById('product-row-' + i);
                   itemsDiv.removeChild(row);
@@ -338,28 +327,22 @@
       saveData();
     }
     
-    // NOVO: Função para zerar o preenchimento dos produtos
     function resetProducts() {
-        // Remove todas as linhas de produto, exceto a primeira (que será recriada)
         itemsDiv.innerHTML = '';
         PRODUCTS = [];
         productCounter = 0;
         
-        // Recria o primeiro produto vazio e visível
         createProductRow(1, '', 1, true);
         
-        // Garante que os totais sejam atualizados e os dados salvos
         calc(); 
     }
     
-    // Adiciona listeners para os campos fixos
     FIXED_IDS.forEach(id => {
       const el = document.getElementById(id);
       if (el) el.addEventListener('input', calc, { passive:true });
     });
     document.getElementById('divide2').addEventListener('change', calc);
 
-    // Lógica de cálculo
     function calc(){
       let soma = 0;
       PRODUCTS.forEach(product => {
@@ -373,14 +356,15 @@
 
       const b8 = pct('b8'), b10 = pct('b10'), b11 = pct('b11'), b12 = pct('b12');
       const b9 = val('b9');
+      const b9b = val('b9b'); // Novo campo de embalagem
 
       const somaPct = b8 + b10 + b11 + b12;
       const denom = 1 - somaPct;
       document.getElementById('warn').style.display = (denom <= 0) ? 'block' : 'none';
 
-      const b13 = denom <= 0 ? 0 : (b7 + b9) / denom;
+      // Agora soma frete (b9) + embalagem (b9b) ao custo total
+      const b13 = denom <= 0 ? 0 : (b7 + b9 + b9b) / denom;
 
-      // valores em R$ derivados das porcentagens
       const margemR   = b13 * b8;
       const impostoR  = b13 * b10;
       const fixoR     = b13 * b11;
@@ -397,7 +381,6 @@
       saveData();
     }
     
-    // Função para persistir dados no localStorage
     function saveData() {
         const data = {
             products: PRODUCTS.map(p => ({
@@ -415,7 +398,6 @@
         localStorage.setItem(PERSIST_KEY, JSON.stringify(data));
     }
 
-    // Função para restaurar dados salvos
     function restoreData() {
         const saved = localStorage.getItem(PERSIST_KEY);
         if (!saved) {
@@ -425,7 +407,6 @@
         
         const data = JSON.parse(saved);
         
-        // 1. Restaura produtos
         if (data.products && data.products.length > 0) {
             itemsDiv.innerHTML = '';
             PRODUCTS = [];
@@ -445,7 +426,6 @@
             createProductRow(1, '', 1, true);
         }
         
-        // 2. Restaura campos fixos
         if (data.fixed) {
             Object.entries(data.fixed).forEach(([k, v]) => {
                 const el = document.getElementById(k);
@@ -456,11 +436,9 @@
         }
     }
 
-    // Processo de inicialização
     restoreData();
     calc();
 
-    // PWA
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js');
