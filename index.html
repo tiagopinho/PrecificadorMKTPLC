@@ -181,7 +181,27 @@
     .reset-button:active {
       background-color: #cc2e24;
     }
-
+    .reset-discount {
+    background: var(--accent-red);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    width: 28px;
+    height: 28px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    }
+.reset-discount:active {
+  background: #cc2e24;
+}
+.rowpct {
+  grid-template-columns: 1fr 90px 32px !important;
+}
     @media (max-width:360px){
       .row4{
         grid-template-columns:
@@ -198,12 +218,10 @@
 <body>
   <h1>Precificador Markup</h1>
 
-  <div class="card">
-    <div class="rowpct">
-      <label class="compact-label">DESCONTO NO CUSTO (%)</label>
-      <input type="number" inputmode="decimal" step="0.01" id="discount" placeholder="%" value="50">
-      <div></div>
-    </div>
+  <div class="rowpct">
+  	<label class="compact-label">DESCONTO NO CUSTO (%)</label>
+ 	<input type="number" inputmode="decimal" step="0.01" id="discount" placeholder="%" value="50">
+ 	<button class="reset-discount" onclick="clearDiscount()" title="Limpar desconto">✕</button>
   </div>
 
   <div class="card">
@@ -453,7 +471,10 @@
             });
         }
     }
-
+    function clearDiscount() {
+    document.getElementById('discount').value = '';
+    calc();
+    }	
     restoreData();
     calc();
 
