@@ -245,6 +245,8 @@
       <input type="number" inputmode="decimal" step="0.01" id="b12" placeholder="%">
       <div id="r_b12" class="result-right">R$ 0,00</div>
     </div>
+    
+    <button class="reset-button" onclick="resetTaxes()">Zerar Taxas</button>
   </div>
 
   <div class="card">
@@ -335,6 +337,20 @@
         createProductRow(1, '', 1, true);
         
         calc(); 
+    }
+    
+    // NOVO: Função para zerar apenas as taxas (porcentagens e valores fixos)
+    function resetTaxes() {
+        // Limpa todos os campos de taxas
+        document.getElementById('b8').value = '';  // Margem Lucro
+        document.getElementById('b9').value = '';  // Custo Fixo/Frete
+        document.getElementById('b9b').value = ''; // Embalagem
+        document.getElementById('b10').value = ''; // Imposto
+        document.getElementById('b11').value = ''; // Taxa Extra
+        document.getElementById('b12').value = ''; // Comissão
+        
+        // Recalcula tudo
+        calc();
     }
     
     FIXED_IDS.forEach(id => {
