@@ -199,11 +199,14 @@
   <h1>Precificador Markup</h1>
 
   <div class="card">
-    <div class="toggle">
-      <input type="checkbox" id="divide2" checked aria-label="Dividir total por 2">
-      <label for="divide2">Dividir TOTAL DE CUSTO por 2</label>
+    <div class="rowpct">
+      <label class="compact-label">DESCONTO NO CUSTO (%)</label>
+      <input type="number" inputmode="decimal" step="0.01" id="discount" placeholder="%" value="50">
+      <div></div>
     </div>
+  </div>
 
+  <div class="card">
     <div id="items"></div>
 
     <div class="row">
@@ -265,7 +268,7 @@
     const itemsDiv = document.getElementById('items');
     let PRODUCTS = [];
     let productCounter = 0; 
-    const FIXED_IDS = ['b8','b9','b9b','b10','b11','b12','divide2']; // Adicionado b9b
+    const FIXED_IDS = ['b8','b9','b9b','b10','b11','b12','discount']; // Substituído divide2 por discount
     const PERSIST_KEY = 'precificador';
 
     function createProductRow(index, costValue = '', qtyValue = 1, isVisible = false) {
@@ -357,7 +360,6 @@
       const el = document.getElementById(id);
       if (el) el.addEventListener('input', calc, { passive:true });
     });
-    document.getElementById('divide2').addEventListener('change', calc);
 
     function calc(){
       let soma = 0;
@@ -367,8 +369,9 @@
         soma += bi * ci;
       });
       
-      const dividir2 = document.getElementById('divide2').checked;
-      const b7 = dividir2 ? soma / 2 : soma;
+      // Aplica o desconto percentual ao custo total
+      const discountPct = pct('discount'); // Desconto como fração (0-1)
+      const b7 = soma * (1 - discountPct); // Aplica o desconto
 
       const b8 = pct('b8'), b10 = pct('b10'), b11 = pct('b11'), b12 = pct('b12');
       const b9 = val('b9');
@@ -409,7 +412,7 @@
         };
         FIXED_IDS.forEach(id => {
             const el = document.getElementById(id);
-            data.fixed[id] = (el?.type === 'checkbox') ? el.checked : el.value;
+            data.fixed[id] = el.value;
         });
         localStorage.setItem(PERSIST_KEY, JSON.stringify(data));
     }
@@ -446,8 +449,7 @@
             Object.entries(data.fixed).forEach(([k, v]) => {
                 const el = document.getElementById(k);
                 if (!el) return;
-                if (el.type === 'checkbox') el.checked = !!v;
-                else el.value = v;
+                el.value = v;
             });
         }
     }
