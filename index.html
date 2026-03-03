@@ -121,6 +121,25 @@
     input::placeholder {
       color: var(--text-muted);
     }
+
+    select {
+      padding: var(--input-pad);
+      border-radius: 8px;
+      border: 1px solid var(--input-border);
+      background-color: var(--input-bg);
+      color: var(--text-color);
+      font-size: var(--input-size);
+      -webkit-appearance: none;
+      appearance: none;
+      width: var(--input-width);
+      box-sizing: border-box;
+      cursor: pointer;
+    }
+
+    select:focus {
+      outline: none;
+      border-color: #666;
+    }
     
     .row4 input.money{ width:80px; }
     .row4 input.qty  { width:60px; }
@@ -202,6 +221,77 @@
 .rowpct {
   grid-template-columns: 1fr 90px 32px !important;
 }
+/* Estilos para tabelas de faixas */
+.faixa-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 15px 0;
+  font-size: 13px;
+}
+
+.faixa-table thead {
+  background: #2a3a4a;
+  color: white;
+}
+
+.faixa-table th {
+  padding: 10px;
+  text-align: left;
+  font-weight: 600;
+}
+
+.faixa-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #333;
+}
+
+.faixa-table input {
+  width: 100%;
+  padding: 6px;
+  background: #2a2a2a;
+  border: 1px solid #404040;
+  color: white;
+  border-radius: 4px;
+}
+
+.faixa-table button {
+  padding: 4px 8px;
+  background: #ff3b30;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.faixa-table button:active {
+  background: #cc2e24;
+}
+
+.add-faixa-btn {
+  background: #00ff88;
+  color: #000;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-weight: 600;
+  margin: 10px 0;
+}
+
+.add-faixa-btn:active {
+  opacity: 0.8;
+}
+
+.info-box {
+  background: rgba(100, 150, 200, 0.2);
+  border-left: 3px solid #64a8d8;
+  padding: 10px;
+  margin: 10px 0;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
     @media (max-width:360px){
       .row4{
         grid-template-columns:
@@ -217,6 +307,24 @@
 </head>
 <body>
   <h1>Precificador Markup</h1>
+
+  <div class="card">
+    <div class="rowpct">
+      <label class="compact-label">MARKETPLACE</label>
+      <select id="marketplaceSelect" style="grid-column: 2 / 4; padding: 10px; border-radius: 8px; border: 1px solid var(--input-border); background-color: var(--input-bg); color: var(--text-color); font-size: 16px;">
+        <option value="">Uso Genérico</option>
+        <option value="shopee">Shopee</option>
+        <option value="mercadolivre">Mercado Livre</option>
+        <option value="outros">Outros</option>
+      </select>
+    </div>
+    <div id="marketplaceConfigBtn" style="display: none; margin-top: 10px;">
+      <button onclick="toggleMarketplaceConfig()" style="width: 100%; padding: 10px; background: #2a4a6a; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">⚙️ Configurar Faixas de Preço</button>
+    </div>
+    <div id="marketplaceConfig" style="display: none; margin-top: 15px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+      <!-- Configuração de faixas será inserida aqui -->
+    </div>
+  </div>
 
   <div class="rowpct">
   	<label class="compact-label">DESCONTO NO CUSTO (%)</label>
@@ -241,7 +349,7 @@
       <input type="number" inputmode="decimal" step="0.01" id="b8" placeholder="%">
       <div id="r_b8" class="result-right">R$ 0,00</div>
     </div>
-    <div class="rowpct">
+    <div class="rowpct" id="tax-fixo-wrapper">
       <label class="compact-label">CUSTO FIXO / FRETE (R$)</label>
       <input type="number" inputmode="decimal" step="0.01" id="b9" placeholder="R$">
       <div></div>
@@ -261,7 +369,7 @@
       <input type="number" inputmode="decimal" step="0.01" id="b11" placeholder="%">
       <div id="r_b11" class="result-right">R$ 0,00</div>
     </div>
-    <div class="rowpct">
+    <div class="rowpct" id="tax-comissao-wrapper">
       <label class="compact-label">COMISSÃO (%)</label>
       <input type="number" inputmode="decimal" step="0.01" id="b12" placeholder="%">
       <div id="r_b12" class="result-right">R$ 0,00</div>
@@ -475,6 +583,382 @@
     document.getElementById('discount').value = '';
     calc();
     }	
+    
+    // ===== MARKETPLACE Configuration =====
+    const MARKETPLACES_CONFIG = {
+      shopee: {
+        nome: 'Shopee',
+        tipo: 'progressivo',
+        faixas: [
+          { precoAte: 79.99, percentual: 20, fixo: 4 },
+          { precoAte: 99.99, percentual: 14, fixo: 16 },
+          { precoAte: 199.99, percentual: 14, fixo: 20 },
+          { precoAte: 499.99, percentual: 14, fixo: 26 },
+          { precoAte: Infinity, percentual: 14, fixo: 26 }
+        ]
+      },
+      mercadolivre: {
+        nome: 'Mercado Livre',
+        tipo: 'progressivo_ml',
+        faixas: [
+          { precoAte: 12.50, custoFixoValor: 0 },
+          { precoAte: 29, custoFixoValor: 6.25 },
+          { precoAte: 50, custoFixoValor: 6.50 },
+          { precoAte: 78.99, custoFixoValor: 6.75 },
+          { precoAte: 99.99, custoFixoValor: 19.32 },
+          { precoAte: 119.99, custoFixoValor: 22.55 },
+          { precoAte: 149.99, custoFixoValor: 34.36 },
+          { precoAte: 199.99, custoFixoValor: 38.66 },
+          { precoAte: Infinity, custoFixoValor: 42.95 }
+        ]
+      }
+    };
+
+    let MARKETPLACE_ESTADO = {
+      selecionado: '',
+      configAberta: false
+    };
+
+    // Gerenciar marketplace selecionado
+    document.getElementById('marketplaceSelect').addEventListener('change', function(e) {
+      MARKETPLACE_ESTADO.selecionado = this.value;
+      const configBtn = document.getElementById('marketplaceConfigBtn');
+      const taxFixoWrapper = document.getElementById('tax-fixo-wrapper');
+      const taxComissaoWrapper = document.getElementById('tax-comissao-wrapper');
+      
+      if (this.value === 'shopee') {
+        // Shopee: esconde Custo Fixo e Comissão (usa faixas progressivas)
+        taxFixoWrapper.style.display = 'none';
+        taxComissaoWrapper.style.display = 'none';
+        configBtn.style.display = 'block';
+        MARKETPLACE_ESTADO.configAberta = false;
+        document.getElementById('marketplaceConfig').style.display = 'none';
+      } else if (this.value === 'mercadolivre') {
+        // Mercado Livre: esconde Custo Fixo (usa faixas progressivas)
+        taxFixoWrapper.style.display = 'none';
+        taxComissaoWrapper.style.display = 'grid';
+        configBtn.style.display = 'block';
+        MARKETPLACE_ESTADO.configAberta = false;
+        document.getElementById('marketplaceConfig').style.display = 'none';
+      } else {
+        // Genérico e Outros: mostra todos os campos
+        taxFixoWrapper.style.display = 'grid';
+        taxComissaoWrapper.style.display = 'grid';
+        configBtn.style.display = 'none';
+        document.getElementById('marketplaceConfig').style.display = 'none';
+        MARKETPLACE_ESTADO.configAberta = false;
+      }
+      
+      // Zerar campos escondidos para não interferir no cálculo
+      if (this.value === 'shopee') {
+        document.getElementById('b9').value = '';
+        document.getElementById('b12').value = '';
+      } else if (this.value === 'mercadolivre') {
+        document.getElementById('b9').value = '';
+      }
+      
+      calc();
+      saveData();
+    });
+
+    function toggleMarketplaceConfig() {
+      MARKETPLACE_ESTADO.configAberta = !MARKETPLACE_ESTADO.configAberta;
+      if (MARKETPLACE_ESTADO.configAberta) {
+        renderizarFaixas();
+      }
+      document.getElementById('marketplaceConfig').style.display = MARKETPLACE_ESTADO.configAberta ? 'block' : 'none';
+    }
+
+    function renderizarFaixas() {
+      const marketplace = MARKETPLACE_ESTADO.selecionado;
+      const config = MARKETPLACES_CONFIG[marketplace];
+      const configDiv = document.getElementById('marketplaceConfig');
+      
+      if (!config) {
+        configDiv.innerHTML = '';
+        return;
+      }
+
+      let html = `<h3 style="color: var(--text-color); margin-bottom: 15px;">⚙️ ${config.nome} - Faixas de Preço</h3>`;
+      
+      if (marketplace === 'shopee') {
+        html += '<div class="info-box">Comissão progressiva conforme faixa de preço final.</div>';
+        html += '<table class="faixa-table"><thead><tr><th>Preço até (R$)</th><th>Comissão (%)</th><th>Fixo (R$)</th><th>Ação</th></tr></thead><tbody>';
+        config.faixas.forEach((faixa, idx) => {
+          html += `<tr>
+            <td>${faixa.precoAte === Infinity ? 'Acima de R$ 499,99' : faixa.precoAte}</td>
+            <td><input type="number" class="shopee-faixa-input" data-idx="${idx}" data-campo="percentual" value="${faixa.percentual}" min="0" max="100" step="0.01"></td>
+            <td><input type="number" class="shopee-faixa-input" data-idx="${idx}" data-campo="fixo" value="${faixa.fixo}" min="0" step="0.01"></td>
+            <td>${config.faixas.length > 1 ? `<button onclick="removerFaixaShopee(${idx})">✕</button>` : ''}</td>
+          </tr>`;
+        });
+        html += '</tbody></table>';
+        html += '<button class="add-faixa-btn" onclick="adicionarFaixaShopee()">+ Adicionar Faixa</button>';
+      } else if (marketplace === 'mercadolivre') {
+        html += '<div class="info-box">Custo fixo variável conforme faixa de preço final.</div>';
+        html += '<table class="faixa-table"><thead><tr><th>Preço até (R$)</th><th>Custo Fixo (R$)</th><th>Ação</th></tr></thead><tbody>';
+        config.faixas.forEach((faixa, idx) => {
+          html += `<tr>
+            <td>${faixa.precoAte === Infinity ? 'Acima de R$ 79' : faixa.precoAte}</td>
+            <td><input type="number" class="ml-faixa-input" data-idx="${idx}" data-campo="custoFixoValor" value="${faixa.custoFixoValor}" min="0" step="0.01"></td>
+            <td>${config.faixas.length > 1 ? `<button onclick="removerFaixaMercadoLivre(${idx})">✕</button>` : ''}</td>
+          </tr>`;
+        });
+        html += '</tbody></table>';
+        html += '<button class="add-faixa-btn" onclick="adicionarFaixaMercadoLivre()">+ Adicionar Faixa</button>';
+      }
+
+      configDiv.innerHTML = html;
+
+      // Adicionar listeners aos inputs
+      if (marketplace === 'shopee') {
+        document.querySelectorAll('.shopee-faixa-input').forEach(input => {
+          input.addEventListener('change', salvarFaixasShopee);
+        });
+      } else if (marketplace === 'mercadolivre') {
+        document.querySelectorAll('.ml-faixa-input').forEach(input => {
+          input.addEventListener('change', salvarFaixasMercadoLivre);
+        });
+      }
+    }
+
+    function salvarFaixasShopee() {
+      const inputs = document.querySelectorAll('.shopee-faixa-input');
+      inputs.forEach(input => {
+        const idx = parseInt(input.dataset.idx);
+        const campo = input.dataset.campo;
+        const valor = parseFloat(input.value) || 0;
+        MARKETPLACES_CONFIG.shopee.faixas[idx][campo] = valor;
+      });
+      saveData();
+      calc();
+    }
+
+    function salvarFaixasMercadoLivre() {
+      const inputs = document.querySelectorAll('.ml-faixa-input');
+      inputs.forEach(input => {
+        const idx = parseInt(input.dataset.idx);
+        const campo = input.dataset.campo;
+        const valor = parseFloat(input.value) || 0;
+        MARKETPLACES_CONFIG.mercadolivre.faixas[idx][campo] = valor;
+      });
+      saveData();
+      calc();
+    }
+
+    function adicionarFaixaShopee() {
+      const faixas = MARKETPLACES_CONFIG.shopee.faixas;
+      const ultimaFaixa = faixas[faixas.length - 1];
+      const novaFaixa = {
+        precoAte: (ultimaFaixa.precoAte === Infinity ? 600 : ultimaFaixa.precoAte + 100),
+        percentual: 14,
+        fixo: 26
+      };
+      faixas.push(novaFaixa);
+      renderizarFaixas();
+      saveData();
+    }
+
+    function removerFaixaShopee(idx) {
+      if (MARKETPLACES_CONFIG.shopee.faixas.length > 1) {
+        MARKETPLACES_CONFIG.shopee.faixas.splice(idx, 1);
+        renderizarFaixas();
+        saveData();
+        calc();
+      }
+    }
+
+    function adicionarFaixaMercadoLivre() {
+      const faixas = MARKETPLACES_CONFIG.mercadolivre.faixas;
+      const ultimaFaixa = faixas[faixas.length - 1];
+      const novaFaixa = {
+        precoAte: (ultimaFaixa.precoAte === Infinity ? 300 : ultimaFaixa.precoAte + 50),
+        custoFixoValor: 0
+      };
+      faixas.push(novaFaixa);
+      renderizarFaixas();
+      saveData();
+    }
+
+    function removerFaixaMercadoLivre(idx) {
+      if (MARKETPLACES_CONFIG.mercadolivre.faixas.length > 1) {
+        MARKETPLACES_CONFIG.mercadolivre.faixas.splice(idx, 1);
+        renderizarFaixas();
+        saveData();
+        calc();
+      }
+    }
+
+    // Função auxiliar para obter faixa aplicável
+    function obterFaixaAplicavel(precoFinal, marketplace) {
+      const config = MARKETPLACES_CONFIG[marketplace];
+      if (!config) return null;
+      
+      for (let faixa of config.faixas) {
+        if (precoFinal <= faixa.precoAte) {
+          return faixa;
+        }
+      }
+      return config.faixas[config.faixas.length - 1];
+    }
+
+    // Modificar a função de cálculo para suportar marketplaces progressivos
+    // Override da função calc() para usar Marketplace Config
+    const calcOriginal = calc;
+    window.calcWithMarketplace = function() {
+      let soma = 0;
+      PRODUCTS.forEach(product => {
+        const bi = val(product.bId);
+        const ci = parseFloat(document.getElementById(product.cId).value) || 0;
+        soma += bi * ci;
+      });
+      
+      const discountPct = pct('discount');
+      const b7 = soma * (1 - discountPct);
+
+      const b8 = pct('b8'), b10 = pct('b10'), b11 = pct('b11'), b12 = pct('b12');
+      const b9 = val('b9');
+      const b9b = val('b9b');
+
+      // Se está usando um marketplace progressivo, usar cálculo iterativo
+      const marketplace = MARKETPLACE_ESTADO.selecionado;
+      if (marketplace === 'shopee' || marketplace === 'mercadolivre') {
+        const precoFinal = calcularPrecoProgressivo(b7, b9, b9b, b8, b10, b11, b12, marketplace);
+        document.getElementById('b7').textContent  = brl(b7);
+        document.getElementById('b13').textContent = brl(precoFinal);
+
+        // Calcular taxas de acordo com a faixa
+        const faixa = obterFaixaAplicavel(precoFinal, marketplace);
+        let margemLiquidaTotal = 0;
+        
+        if (marketplace === 'shopee' && faixa) {
+          const comissaoR = precoFinal * (faixa.percentual / 100) + faixa.fixo;
+          const impostoR = precoFinal * b10;
+          const extraR = precoFinal * b11;
+          const lucroR = b8 > 0 ? (precoFinal * b8) : 0;
+          margemLiquidaTotal = precoFinal - b7 - b9 - b9b - comissaoR - impostoR - extraR - lucroR;
+          
+          document.getElementById('r_b8').textContent = brl(lucroR || 0);
+          document.getElementById('r_b10').textContent = brl(impostoR);
+          document.getElementById('r_b11').textContent = brl(extraR);
+          document.getElementById('r_b12').textContent = brl(comissaoR);
+        } else if (marketplace === 'mercadolivre' && faixa) {
+          const custoFixoR = faixa.custoFixoValor || 0;
+          const impostoR = precoFinal * b10;
+          const comissaoR = precoFinal * b12;
+          const extraR = precoFinal * b11;
+          const lucroR = b8 > 0 ? (precoFinal * b8) : 0;
+          margemLiquidaTotal = precoFinal - b7 - b9 - b9b - custoFixoR - impostoR - comissaoR - extraR - lucroR;
+          
+          document.getElementById('r_b8').textContent = brl(lucroR || 0);
+          document.getElementById('r_b10').textContent = brl(impostoR);
+          document.getElementById('r_b11').textContent = brl(extraR);
+          document.getElementById('r_b12').textContent = brl(comissaoR + custoFixoR);
+        }
+
+        document.getElementById('warn').style.display = 'none';
+      } else {
+        // Usar cálculo original para uso genérico
+        calcOriginal.call(this);
+      }
+    };
+
+    function calcularPrecoProgressivo(custoBase, frete, embalagem, margem, imposto, extra, comissao, marketplace) {
+      // Cálculo iterativo para encontrar o preço final
+      let precoFinal = custoBase * 1.3; // Palpite inicial
+      let precision = 0.01;
+      let maxIter = 20;
+
+      for (let i = 0; i < maxIter; i++) {
+        const faixa = obterFaixaAplicavel(precoFinal, marketplace);
+        if (!faixa) {
+          return precoFinal;
+        }
+
+        let taxasPercentuais = 0;
+        let taxasFixas = 0;
+
+        if (marketplace === 'shopee') {
+          taxasPercentuais = (faixa.percentual / 100) + imposto + extra + comissao + margem;
+          taxasFixas = faixa.fixo;
+        } else if (marketplace === 'mercadolivre') {
+          taxasPercentuais = imposto + extra + comissao + margem;
+          taxasFixas = faixa.custoFixoValor || 0;
+        }
+
+        const novoPreco = (custoBase + frete + embalagem + taxasFixas) / (1 - taxasPercentuais);
+        
+        if (Math.abs(novoPreco - precoFinal) < precision) {
+          return novoPreco;
+        }
+        precoFinal = novoPreco;
+      }
+
+      return precoFinal;
+    }
+
+    // Sobrescrever função calc com versão marketplace
+    const originalCalc = calc;
+    calc = function() {
+      if (MARKETPLACE_ESTADO.selecionado === 'shopee' || MARKETPLACE_ESTADO.selecionado === 'mercadolivre') {
+        calcWithMarketplace();
+      } else {
+        originalCalc.call(this);
+      }
+    };
+
+    // Restaurar dados de marketplace
+    function restoreMarketplaceData() {
+      const saved = localStorage.getItem(PERSIST_KEY);
+      if (saved) {
+        const data = JSON.parse(saved);
+        if (data.marketplace) {
+          MARKETPLACE_ESTADO.selecionado = data.marketplace;
+          document.getElementById('marketplaceSelect').value = data.marketplace;
+          
+          const configBtn = document.getElementById('marketplaceConfigBtn');
+          const taxFixoWrapper = document.getElementById('tax-fixo-wrapper');
+          const taxComissaoWrapper = document.getElementById('tax-comissao-wrapper');
+          
+          if (data.marketplace === 'shopee') {
+            configBtn.style.display = 'block';
+            taxFixoWrapper.style.display = 'none';
+            taxComissaoWrapper.style.display = 'none';
+          } else if (data.marketplace === 'mercadolivre') {
+            configBtn.style.display = 'block';
+            taxFixoWrapper.style.display = 'none';
+            taxComissaoWrapper.style.display = 'grid';
+          } else {
+            configBtn.style.display = 'none';
+            taxFixoWrapper.style.display = 'grid';
+            taxComissaoWrapper.style.display = 'grid';
+          }
+        }
+        if (data.shopeeConfig) {
+          MARKETPLACES_CONFIG.shopee = data.shopeeConfig;
+        }
+        if (data.mercadolivreConfig) {
+          MARKETPLACES_CONFIG.mercadolivre = data.mercadolivreConfig;
+        }
+      }
+    }
+
+    // Modificar saveData para salvar marketplace
+    const saveDataOriginal = saveData;
+    saveData = function() {
+      saveDataOriginal.call(this);
+      
+      const saved = localStorage.getItem(PERSIST_KEY);
+      const data = saved ? JSON.parse(saved) : {};
+      
+      data.marketplace = MARKETPLACE_ESTADO.selecionado;
+      data.shopeeConfig = MARKETPLACES_CONFIG.shopee;
+      data.mercadolivreConfig = MARKETPLACES_CONFIG.mercadolivre;
+      
+      localStorage.setItem(PERSIST_KEY, JSON.stringify(data));
+    };
+
+    restoreMarketplaceData();
     restoreData();
     calc();
 
