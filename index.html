@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <link rel="manifest" href="manifest.webmanifest">
+  <!-- <link rel="manifest" href="manifest.webmanifest"> -->
   <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
   <title>Precificador Markup</title>
   <style>
     :root{
@@ -17,7 +18,7 @@
       --input-pad: 10px;
       --input-width: 100%;
       
-      /* Tema escuro */
+      /* Tema escuro (padrão) */
       --bg-body: #000000;
       --bg-card: #1a1a1a;
       --border-color: #333333;
@@ -27,6 +28,48 @@
       --input-border: #404040;
       --accent-green: #00ff88;
       --accent-red: #ff3b30;
+    }
+    
+    /* Tema claro */
+    body.light-mode {
+      color-scheme: light;
+      --bg-body: #f5f5f5;
+      --bg-card: #ffffff;
+      --border-color: #e0e0e0;
+      --text-color: #000000;
+      --text-muted: #666666;
+      --input-bg: #f0f0f0;
+      --input-border: #d0d0d0;
+      --accent-green: #00aa00;
+      --accent-red: #ff3b30;
+    }
+    
+    .header-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    
+    .header-container h1 {
+      margin: 0;
+      flex: 1;
+    }
+    
+    .theme-toggle-btn {
+      padding: 8px 16px;
+      border: 1px solid var(--input-border);
+      background-color: var(--input-bg);
+      color: var(--text-color);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+    
+    .theme-toggle-btn:hover {
+      background-color: var(--border-color);
     }
     
     html, body{ 
@@ -71,16 +114,27 @@
 
     .row4{
       display:grid;
-      grid-template-columns:
-        minmax(120px, 1fr)
-        10px
-        80px
-        10px
-        32px
-        10px
-        60px;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap:10px;
       align-items:center;
       margin:8px 0;
+    }
+
+    .row4.product-label {
+      grid-template-columns: 1fr 1fr 1fr;
+      margin-bottom: 2px;
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .row4.product-inputs {
+      grid-template-columns: 1fr 1fr 1fr;
+      margin-bottom: 12px;
+    }
+
+    .row4.with-peso {
+      grid-template-columns: 1fr 1fr 1fr;
     }
 
     .row4 > label{
@@ -91,13 +145,10 @@
       text-overflow:ellipsis;
       color: var(--text-color);
     }
-    .qtd-label{ 
-      white-space:nowrap; 
-      text-align:center; 
-      font-weight:600; 
-      color: var(--text-color);
-      font-size: 14px;
-      min-width: 32px;
+    input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent-green);
     }
 
     input[type="number"], input[type="text"]{
@@ -141,8 +192,9 @@
       border-color: #666;
     }
     
-    .row4 input.money{ width:80px; }
-    .row4 input.qty  { width:60px; }
+    .row4 input.money{ width:100%; }
+    .row4 input.qty  { width:100%; }
+    .row4 input.peso { width:100%; }
 
     .muted{ color: var(--text-muted); font-size:.9rem; }
     .result{ 
@@ -306,7 +358,10 @@
   </style>
 </head>
 <body>
-  <h1>Precificador Markup</h1>
+  <div class="header-container">
+    <h1>Precificador Markup</h1>
+    <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Alternar tema">🌙 Dark Mode</button>
+  </div>
 
   <div class="card">
     <div class="rowpct">
@@ -315,7 +370,6 @@
         <option value="">Uso Genérico</option>
         <option value="shopee">Shopee</option>
         <option value="mercadolivre">Mercado Livre</option>
-        <option value="outros">Outros</option>
       </select>
     </div>
     <div id="marketplaceConfigBtn" style="display: none; margin-top: 10px;">
@@ -380,9 +434,9 @@
 
   <div class="card">
     <div id="warn" class="warn muted" style="display:none;">⚠️ A soma dos percentuais (lucro + impostos + fixo + comissão) precisa ser menor que 100%.</div>
-    <div class="row-big-result">
-      <label>VALOR ANÚNCIO</label>
-      <div id="b13" class="result-big">R$ 0,00</div>
+    <div style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
+      <label style="flex: 1;">VALOR ANÚNCIO</label>
+      <input type="number" inputmode="decimal" step="0.01" id="b13" placeholder="0,00" style="flex: 1; max-width: 140px; padding: 10px; border-radius: 8px; border: 1px solid var(--input-border); background-color: var(--input-bg); color: var(--accent-green); font-size: 16px; font-weight: 700; text-align: right;">
     </div>
   </div>
 
@@ -396,37 +450,66 @@
     let productCounter = 0; 
     const FIXED_IDS = ['b8','b9','b9b','b10','b11','b12','discount']; // Substituído divide2 por discount
     const PERSIST_KEY = 'precificador';
+    
+    // Rastreamento para cálculo bidirecional
+    let ultimoCampoAlterado = ''; // 'margem', 'anuncio', ou ''
 
-    function createProductRow(index, costValue = '', qtyValue = 1, isVisible = false) {
+    function createProductRow(index, costValue = '', qtyValue = 1, pesoValue = 0, isVisible = false) {
       productCounter = index; 
       const bId = 'b' + index;
       const cId = 'c' + index;
+      const pesoId = 'peso' + index;
 
-      const wrap = document.createElement('div');
-      wrap.className = 'row4 product-row';
-      wrap.id = 'product-row-' + index;
-      wrap.style.display = isVisible ? 'grid' : 'none';
-
-      wrap.innerHTML = `
-        <label>PRODUTO ${index}</label>
-        <span></span>
-        <input class="money" type="number" inputmode="decimal" step="0.01" id="${bId}" placeholder="0,00" value="${costValue}">
-        <span></span>
-        <span class="qtd-label">QTD</span>
-        <span></span>
-        <input class="qty" type="number" inputmode="numeric" pattern="[0-9]*" step="1" id="${cId}" value="${qtyValue}">
+      // Linha com labels
+      const wrapLabel = document.createElement('div');
+      wrapLabel.className = 'row4 product-label';
+      wrapLabel.id = 'product-label-' + index;
+      wrapLabel.style.display = isVisible ? 'grid' : 'none';
+      wrapLabel.innerHTML = `
+        <div>PRODUTO ${index}</div>
+        <div>QTD</div>
+        <div>PESO (kg)</div>
       `;
-      itemsDiv.appendChild(wrap);
+      itemsDiv.appendChild(wrapLabel);
+
+      // Linha com inputs
+      const wrapInputs = document.createElement('div');
+      wrapInputs.className = 'row4 product-inputs';
+      wrapInputs.id = 'product-row-' + index;
+      wrapInputs.style.display = isVisible ? 'grid' : 'none';
       
-      PRODUCTS.push({ bId, cId });
+      let innerHtml = `
+        <input class="money" type="number" inputmode="decimal" step="0.01" id="${bId}" placeholder="Valor" value="${costValue}">
+        <input class="qty" type="number" inputmode="numeric" pattern="[0-9]*" step="1" id="${cId}" value="${qtyValue}">
+        <input class="peso" type="number" inputmode="decimal" step="0.01" id="${pesoId}" placeholder="kg" value="${pesoValue}">
+      `;
+
+      wrapInputs.innerHTML = innerHtml;
+      itemsDiv.appendChild(wrapInputs);
+      
+      PRODUCTS.push({ bId, cId, pesoId });
 
       const costInput = document.getElementById(bId);
       const qtyInput = document.getElementById(cId);
+      const pesoInput = document.getElementById(pesoId);
 
       costInput.addEventListener('input', handleProductInput, { passive:true });
-      qtyInput.addEventListener('input', calc, { passive:true });
+      qtyInput.addEventListener('input', handleProductChange, { passive:true });
+      pesoInput.addEventListener('input', handleProductChange, { passive:true });
 
       return costInput.parentElement;
+    }
+    
+    function handleProductChange(e) {
+      // Quando qty ou peso muda, recalcular
+      // Se estamos em modo "anuncio" (valor anuncio foi digitado), recalcular margem também
+      calc();
+      if (ultimoCampoAlterado === 'anuncio') {
+        // Dar um pequeno delay para calc() processar antes de calcReverso()
+        setTimeout(() => {
+          calcReverso();
+        }, 10);
+      }
     }
 
     function handleProductInput(e) {
@@ -438,7 +521,9 @@
 
       if (currentValue > 0 && currentIndex === PRODUCTS.length) {
           const nextIndex = productCounter + 1;
-          createProductRow(nextIndex, '', 1, true); 
+          createProductRow(nextIndex, '', 1, 0, true);
+          // Ajustar visibilidade do peso para a nova linha criada
+          atualizarRowsComPeso();
       }
       
       if (currentValue === 0) {
@@ -463,7 +548,7 @@
         PRODUCTS = [];
         productCounter = 0;
         
-        createProductRow(1, '', 1, true);
+        createProductRow(1, '', 1, 0, true);
         
         calc(); 
     }
@@ -484,8 +569,31 @@
     
     FIXED_IDS.forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.addEventListener('input', calc, { passive:true });
+      if (el) {
+        el.addEventListener('input', function() {
+          if (id === 'b8') ultimoCampoAlterado = 'margem';
+          // Guardar b12 no marketplace atual
+          if (id === 'b12') {
+            MARKETPLACE_ESTADO.b12_valores[MARKETPLACE_ESTADO.selecionado] = el.value;
+          }
+          calc();
+        }, { passive:true });
+      }
     });
+    
+    // Helper para formatar valor com 2 casas decimais
+    // Listener especial para VALOR ANÚNCIO (cálculo reverso)
+    const b13Input = document.getElementById('b13');
+    if (b13Input) {
+      b13Input.addEventListener('input', function() {
+        let numValue = parseFloat(this.value.replace(',', '.')) || 0;
+        // Só fazer cálculo reverso se o valor é maior que 0
+        if (numValue > 0) {
+          ultimoCampoAlterado = 'anuncio';
+          calcReverso();
+        }
+      }, { passive:true });
+    }
 
     function calc(){
       let soma = 0;
@@ -516,7 +624,7 @@
       const comissaoR = b13 * b12;
 
       document.getElementById('b7').textContent  = brl(b7);
-      document.getElementById('b13').textContent = brl(b13);
+      document.getElementById('b13').value = b13.toFixed(2);
 
       document.getElementById('r_b8').textContent  = brl(margemR);
       document.getElementById('r_b10').textContent = brl(impostoR);
@@ -525,16 +633,101 @@
 
       saveData();
     }
+
+    function calcReverso() {
+      // Modo reverso: usuário digita VALOR ANÚNCIO, sistema calcula MARGEM LUCRO
+      let soma = 0;
+      PRODUCTS.forEach(product => {
+        const bi = val(product.bId);
+        const ci = parseFloat(document.getElementById(product.cId).value) || 0;
+        soma += bi * ci;
+      });
+      
+      const discountPct = pct('discount');
+      const b7 = soma * (1 - discountPct);
+      const b13 = val('b13'); // Valor digitado pelo usuário
+      const b9 = val('b9');
+      const b9b = val('b9b');
+      const b10 = pct('b10'), b11 = pct('b11'), b12 = pct('b12');
+
+      // Para marketplace progressivo, precisa encontrar o custo fixo e taxa percentual baseado no preço digitado
+      let custoFixoAdicional = 0;
+      let taxaPercentualAdicional = 0; // Para Shopee
+      const marketplace = MARKETPLACE_ESTADO.selecionado;
+      if ((marketplace === 'shopee' || marketplace === 'mercadolivre') && b13 > 0) {
+        const faixa = obterFaixaAplicavel(b13, marketplace);
+        if (faixa) {
+          if (marketplace === 'mercadolivre') {
+            custoFixoAdicional = faixa.custoFixoValor || 0;
+          } else if (marketplace === 'shopee') {
+            taxaPercentualAdicional = (faixa.percentual / 100) || 0;
+            custoFixoAdicional = faixa.fixo || 0;
+          }
+        }
+      }
+
+      // Fórmula reversa para calcular margem
+      // b13 = (b7 + b9 + b9b + custoFixo + b8*b13) / (1 - shopeePercentual - b10 - b11 - b12)
+      // ou para Mercado Livre (sem shopeePercentual):
+      // b13 = (b7 + b9 + b9b + custoFixo + b8*b13) / (1 - b10 - b11 - b12)
+      
+      let b8Calculado = 0;
+      if (b13 > 0) {
+        const somaPctOtros = taxaPercentualAdicional + b10 + b11 + b12;
+        b8Calculado = ((b13 * (1 - somaPctOtros)) - (b7 + b9 + b9b + custoFixoAdicional)) / b13;
+        
+        // Garantir que margem não seja negativa
+        if (b8Calculado < 0) b8Calculado = 0;
+      }
+      
+      // b8Calculado está em decimal (0,15 para 15%), converter para percentual (15)
+      const b8Percentual = b8Calculado * 100;
+      
+      // Atualizar o campo de margem (sempre 2 casas decimais)
+      document.getElementById('b8').value = b8Percentual.toFixed(2);
+      
+      // Apenas atualizar os valores exibidos em reais, SEM recalcular b13
+      atualizarValoresExibidos();
+      
+      saveData();
+    }
     
+    function atualizarValoresExibidos() {
+      // Atualiza apenas os valores exibidos (em reais) sem recalcular b13
+      const b8 = pct('b8'), b10 = pct('b10'), b11 = pct('b11'), b12 = pct('b12');
+      const b13 = val('b13');
+      
+      const margemR   = b13 * b8;
+      const impostoR  = b13 * b10;
+      const fixoR     = b13 * b11;
+      const comissaoR = b13 * b12;
+
+      document.getElementById('r_b8').textContent  = brl(margemR);
+      document.getElementById('r_b10').textContent = brl(impostoR);
+      document.getElementById('r_b11').textContent = brl(fixoR);
+      document.getElementById('r_b12').textContent = brl(comissaoR);
+    }
     function saveData() {
+        // IMPORTANTE: salvar apenas produtos que têm CUSTO (dados reais), não as linhas vazias
+        const productsComDados = PRODUCTS.filter(p => {
+            const cost = document.getElementById(p.bId).value;
+            return cost !== '' && cost !== '0';
+        });
+        
         const data = {
-            products: PRODUCTS.map(p => ({
+            marketplace: MARKETPLACE_ESTADO.selecionado,
+            products: productsComDados.map((p, idx) => ({
                 bId: p.bId,
                 cId: p.cId,
+                pesoId: p.pesoId,
                 cost: document.getElementById(p.bId).value,
-                qty: document.getElementById(p.cId).value
+                qty: document.getElementById(p.cId).value,
+                peso: document.getElementById(p.pesoId) ? document.getElementById(p.pesoId).value : ''
             })),
-            fixed: {}
+            fixed: {},
+            b13: parseFloat(document.getElementById('b13').value || 0).toFixed(2),
+            shopeeConfig: MARKETPLACES_CONFIG.shopee,
+            b12_valores: MARKETPLACE_ESTADO.b12_valores // Guardar b12 por marketplace
         };
         FIXED_IDS.forEach(id => {
             const el = document.getElementById(id);
@@ -546,38 +739,68 @@
     function restoreData() {
         const saved = localStorage.getItem(PERSIST_KEY);
         if (!saved) {
-            createProductRow(1, '', 1, true);
-            return;
+            createProductRow(1, '', 1, 0, true);
+            return false;
         }
         
         const data = JSON.parse(saved);
         
+        // Restaurar b12_valores (valores separados por marketplace)
+        if (data.b12_valores) {
+            MARKETPLACE_ESTADO.b12_valores = data.b12_valores;
+        }
+        
+        // Restaurar marketplace selecionado
+        if (data.marketplace) {
+            MARKETPLACE_ESTADO.selecionado = data.marketplace;
+            const marketplaceSelect = document.getElementById('marketplaceSelect');
+            if (marketplaceSelect) {
+                marketplaceSelect.value = data.marketplace;
+                // Disparar evento change para atualizar a UI (mostrar/esconder botões, etc)
+                marketplaceSelect.dispatchEvent(new Event('change'));
+            }
+        }
+        
+        // PRIMEIRO: Restaurar campos fixos (taxas) ANTES de criar produtos
+        if (data.fixed) {
+            Object.entries(data.fixed).forEach(([k, v]) => {
+                const el = document.getElementById(k);
+                if (!el) return;
+                
+                // Para Mercado Livre: sempre restaurar b12, mas nunca restaurar b9
+                if (data.marketplace === 'mercadolivre') {
+                    if (k === 'b9') {
+                        return; // Não restaurar b9 em Mercado Livre
+                    }
+                }
+                
+                el.value = v;
+            });
+        }
+        
+        if (data.b13) {
+            document.getElementById('b13').value = parseFloat(data.b13).toFixed(2);
+        }
+        
+        // DEPOIS: Restaurar produtos
         if (data.products && data.products.length > 0) {
             itemsDiv.innerHTML = '';
             PRODUCTS = [];
             
             data.products.forEach((p, index) => {
                 const productIndex = index + 1;
-                createProductRow(productIndex, p.cost, p.qty, true);
-                
-                if (index === data.products.length - 1 && parseFloat(p.cost) > 0) {
-                    createProductRow(productIndex + 1, '', 1, true);
-                }
+                const pesoValue = p.peso !== undefined && p.peso !== '' ? p.peso : 0;
+                const isVisible = true;
+                createProductRow(productIndex, p.cost, p.qty, pesoValue, isVisible);
             });
-            if (PRODUCTS.length === 0 || val(PRODUCTS[PRODUCTS.length-1].bId) === 0) {
-                 createProductRow(Math.max(1, productCounter + 1), '', 1, true);
-            }
+            
+            const ultimoIndex = data.products.length;
+            createProductRow(ultimoIndex + 1, '', 1, 0, true);
         } else {
-            createProductRow(1, '', 1, true);
+            createProductRow(1, '', 1, 0, true);
         }
         
-        if (data.fixed) {
-            Object.entries(data.fixed).forEach(([k, v]) => {
-                const el = document.getElementById(k);
-                if (!el) return;
-                el.value = v;
-            });
-        }
+        return true;
     }
     function clearDiscount() {
     document.getElementById('discount').value = '';
@@ -600,46 +823,148 @@
       mercadolivre: {
         nome: 'Mercado Livre',
         tipo: 'progressivo_ml',
-        faixas: [
-          { precoAte: 12.50, custoFixoValor: 0 },
-          { precoAte: 29, custoFixoValor: 6.25 },
-          { precoAte: 50, custoFixoValor: 6.50 },
-          { precoAte: 78.99, custoFixoValor: 6.75 },
-          { precoAte: 99.99, custoFixoValor: 19.32 },
-          { precoAte: 119.99, custoFixoValor: 22.55 },
-          { precoAte: 149.99, custoFixoValor: 34.36 },
-          { precoAte: 199.99, custoFixoValor: 38.66 },
-          { precoAte: Infinity, custoFixoValor: 42.95 }
+        faixasPeso: [
+          { pesoAte: 0.3, nome: 'Até 0,3 kg' },
+          { pesoAte: 0.5, nome: 'De 0,3 a 0,5 kg' },
+          { pesoAte: 1, nome: 'De 0,5 a 1 kg' },
+          { pesoAte: 1.5, nome: 'De 1 a 1,5 kg' },
+          { pesoAte: 2, nome: 'De 1,5 a 2 kg' },
+          { pesoAte: 3, nome: 'De 2 a 3 kg' },
+          { pesoAte: 4, nome: 'De 3 a 4 kg' },
+          { pesoAte: 5, nome: 'De 4 a 5 kg' },
+          { pesoAte: 6, nome: 'De 5 a 6 kg' },
+          { pesoAte: 7, nome: 'De 6 a 7 kg' },
+          { pesoAte: 8, nome: 'De 7 a 8 kg' },
+          { pesoAte: 9, nome: 'De 8 a 9 kg' },
+          { pesoAte: 11, nome: 'De 9 a 11 kg' },
+          { pesoAte: 13, nome: 'De 11 a 13 kg' },
+          { pesoAte: 15, nome: 'De 13 a 15 kg' },
+          { pesoAte: 17, nome: 'De 15 a 17 kg' },
+          { pesoAte: 20, nome: 'De 17 a 20 kg' },
+          { pesoAte: 25, nome: 'De 20 a 25 kg' },
+          { pesoAte: 30, nome: 'De 25 a 30 kg' },
+          { pesoAte: 40, nome: 'De 30 a 40 kg' },
+          { pesoAte: 50, nome: 'De 40 a 50 kg' },
+          { pesoAte: 60, nome: 'De 50 a 60 kg' },
+          { pesoAte: 70, nome: 'De 60 a 70 kg' },
+          { pesoAte: 80, nome: 'De 70 a 80 kg' },
+          { pesoAte: 90, nome: 'De 80 a 90 kg' },
+          { pesoAte: 100, nome: 'De 90 a 100 kg' },
+          { pesoAte: 125, nome: 'De 100 a 125 kg' },
+          { pesoAte: 150, nome: 'De 125 a 150 kg' },
+          { pesoAte: Infinity, nome: 'Mais de 150 kg' }
+        ],
+        faixasPreco: [
+          { precoAte: 18.99, nome: 'R$ 0 a R$ 18,99' },
+          { precoAte: 48.99, nome: 'R$ 19 a R$ 48,99' },
+          { precoAte: 78.99, nome: 'R$ 49 a R$ 78,99' },
+          { precoAte: 99.99, nome: 'R$ 79 a R$ 99,99' },
+          { precoAte: 119.99, nome: 'R$ 100 a R$ 119,99' },
+          { precoAte: 149.99, nome: 'R$ 120 a R$ 149,99' },
+          { precoAte: 199.99, nome: 'R$ 150 a R$ 199,99' },
+          { precoAte: Infinity, nome: 'A partir de R$ 200' }
+        ],
+        tabela: [
+          // Até 0,3 kg
+          [5.65, 6.55, 7.75, 12.35, 14.35, 16.45, 18.45, 20.95],
+          // De 0,3 a 0,5 kg
+          [5.55, 6.65, 7.85, 13.25, 15.45, 17.65, 19.55, 22.55],
+          // De 0,5 a 1 kg
+          [6.05, 6.75, 7.95, 13.85, 16.15, 18.45, 20.75, 23.65],
+          // De 1 a 1,5 kg
+          [6.15, 6.85, 8.05, 14.15, 16.45, 18.85, 21.15, 24.65],
+          // De 1,5 a 2 kg
+          [6.25, 6.95, 8.15, 14.45, 16.85, 19.25, 21.65, 24.65],
+          // De 2 a 3 kg
+          [6.35, 7.95, 8.55, 15.75, 18.35, 21.05, 23.65, 26.25],
+          // De 3 a 4 kg
+          [6.45, 8.15, 8.95, 17.05, 19.85, 22.65, 25.55, 28.35],
+          // De 4 a 5 kg
+          [6.55, 8.35, 9.75, 18.45, 21.55, 24.65, 27.75, 30.75],
+          // De 5 a 6 kg
+          [6.65, 8.55, 9.95, 25.45, 28.55, 32.65, 35.75, 39.75],
+          // De 6 a 7 kg
+          [6.75, 8.75, 10.15, 27.05, 31.05, 36.05, 40.05, 44.05],
+          // De 7 a 8 kg
+          [6.85, 8.95, 10.35, 28.85, 33.65, 38.45, 43.25, 48.05],
+          // De 8 a 9 kg
+          [6.95, 9.15, 10.55, 29.65, 34.55, 39.55, 44.45, 49.35],
+          // De 9 a 11 kg
+          [7.05, 9.55, 10.95, 41.25, 48.05, 54.95, 61.75, 68.65],
+          // De 11 a 13 kg
+          [7.15, 9.95, 11.35, 42.15, 49.25, 56.25, 63.25, 70.25],
+          // De 13 a 15 kg
+          [7.25, 10.15, 11.55, 45.05, 52.45, 59.95, 67.45, 74.95],
+          // De 15 a 17 kg
+          [7.35, 10.35, 11.75, 48.55, 56.05, 63.55, 70.75, 78.65],
+          // De 17 a 20 kg
+          [7.45, 10.55, 11.95, 54.75, 63.85, 72.95, 82.05, 91.15],
+          // De 20 a 25 kg
+          [7.65, 10.95, 12.15, 64.05, 75.05, 84.75, 95.35, 105.95],
+          // De 25 a 30 kg
+          [7.75, 11.15, 12.35, 65.95, 75.45, 85.55, 96.25, 106.95],
+          // De 30 a 40 kg
+          [7.85, 11.35, 12.55, 67.75, 78.95, 88.95, 99.15, 107.05],
+          // De 40 a 50 kg
+          [7.95, 11.55, 12.75, 70.25, 81.05, 92.05, 102.55, 110.75],
+          // De 50 a 60 kg
+          [8.05, 11.75, 12.95, 74.95, 86.45, 98.15, 109.35, 118.15],
+          // De 60 a 70 kg
+          [8.15, 11.95, 13.15, 80.25, 92.95, 105.05, 117.15, 126.55],
+          // De 70 a 80 kg
+          [8.25, 12.15, 13.35, 83.95, 97.05, 109.85, 122.45, 132.25],
+          // De 80 a 90 kg
+          [8.35, 12.35, 13.55, 93.25, 107.45, 122.05, 136.05, 146.95],
+          // De 90 a 100 kg
+          [8.45, 12.55, 13.75, 106.55, 123.95, 139.55, 155.55, 167.95],
+          // De 100 a 125 kg
+          [8.55, 12.75, 13.95, 113.25, 138.05, 156.05, 173.95, 187.95],
+          // De 125 a 150 kg
+          [8.65, 12.75, 14.15, 126.55, 146.15, 165.65, 184.65, 199.45],
+          // Mais de 150 kg
+          [8.75, 12.95, 14.35, 166.15, 192.45, 217.55, 242.55, 261.95]
         ]
       }
     };
 
     let MARKETPLACE_ESTADO = {
       selecionado: '',
-      configAberta: false
+      configAberta: false,
+      b12_valores: {
+        shopee: '',
+        mercadolivre: '',
+        generico: ''
+      }
     };
 
     // Gerenciar marketplace selecionado
     document.getElementById('marketplaceSelect').addEventListener('change', function(e) {
+      // ANTES de trocar: guardar valor atual de b12
+      MARKETPLACE_ESTADO.b12_valores[MARKETPLACE_ESTADO.selecionado] = document.getElementById('b12').value;
+      
       MARKETPLACE_ESTADO.selecionado = this.value;
       const configBtn = document.getElementById('marketplaceConfigBtn');
       const taxFixoWrapper = document.getElementById('tax-fixo-wrapper');
       const taxComissaoWrapper = document.getElementById('tax-comissao-wrapper');
       
       if (this.value === 'shopee') {
-        // Shopee: esconde Custo Fixo e Comissão (usa faixas progressivas)
+        // Shopee: esconde Custo Fixo e Comissão (usa faixas progressivas configuráveis)
         taxFixoWrapper.style.display = 'none';
         taxComissaoWrapper.style.display = 'none';
         configBtn.style.display = 'block';
         MARKETPLACE_ESTADO.configAberta = false;
         document.getElementById('marketplaceConfig').style.display = 'none';
+        document.getElementById('b12').value = ''; // Zero durante Shopee
       } else if (this.value === 'mercadolivre') {
-        // Mercado Livre: esconde Custo Fixo (usa faixas progressivas)
+        // Mercado Livre: esconde Custo Fixo (usa tabela fixa, não configurável)
+        // Mas mostra o botão para visualizar (sem edição)
         taxFixoWrapper.style.display = 'none';
         taxComissaoWrapper.style.display = 'grid';
         configBtn.style.display = 'block';
         MARKETPLACE_ESTADO.configAberta = false;
         document.getElementById('marketplaceConfig').style.display = 'none';
+        // Restaurar b12 que era para Mercado Livre
+        document.getElementById('b12').value = MARKETPLACE_ESTADO.b12_valores.mercadolivre;
       } else {
         // Genérico e Outros: mostra todos os campos
         taxFixoWrapper.style.display = 'grid';
@@ -647,19 +972,44 @@
         configBtn.style.display = 'none';
         document.getElementById('marketplaceConfig').style.display = 'none';
         MARKETPLACE_ESTADO.configAberta = false;
+        // Restaurar b12 que era para Genérico
+        document.getElementById('b12').value = MARKETPLACE_ESTADO.b12_valores.generico;
       }
       
-      // Zerar campos escondidos para não interferir no cálculo
-      if (this.value === 'shopee') {
-        document.getElementById('b9').value = '';
-        document.getElementById('b12').value = '';
-      } else if (this.value === 'mercadolivre') {
+      // Zerar b9 para Shopee e Mercado Livre (nunca usado)
+      if (this.value === 'shopee' || this.value === 'mercadolivre') {
         document.getElementById('b9').value = '';
       }
+
+      // Atualizar todas as rows de produtos para mostrar/esconder peso
+      atualizarRowsComPeso();
       
       calc();
       saveData();
     });
+
+    function atualizarRowsComPeso() {
+      const showPeso = MARKETPLACE_ESTADO.selecionado === 'mercadolivre';
+      
+      PRODUCTS.forEach((product, idx) => {
+        const index = idx + 1;
+        const rowLabel = document.getElementById('product-label-' + index);
+        const pesoInput = document.getElementById(product.pesoId);
+        
+        // Mostrar/esconder label de peso
+        if (rowLabel) {
+          const labels = rowLabel.querySelectorAll('div');
+          if (labels[2]) {
+            labels[2].style.display = showPeso ? 'block' : 'none';
+          }
+        }
+        
+        // Mostrar/esconder input de peso
+        if (pesoInput) {
+          pesoInput.style.display = showPeso ? 'block' : 'none';
+        }
+      });
+    }
 
     function toggleMarketplaceConfig() {
       MARKETPLACE_ESTADO.configAberta = !MARKETPLACE_ESTADO.configAberta;
@@ -695,17 +1045,25 @@
         html += '</tbody></table>';
         html += '<button class="add-faixa-btn" onclick="adicionarFaixaShopee()">+ Adicionar Faixa</button>';
       } else if (marketplace === 'mercadolivre') {
-        html += '<div class="info-box">Custo fixo variável conforme faixa de preço final.</div>';
-        html += '<table class="faixa-table"><thead><tr><th>Preço até (R$)</th><th>Custo Fixo (R$)</th><th>Ação</th></tr></thead><tbody>';
-        config.faixas.forEach((faixa, idx) => {
-          html += `<tr>
-            <td>${faixa.precoAte === Infinity ? 'Acima de R$ 79' : faixa.precoAte}</td>
-            <td><input type="number" class="ml-faixa-input" data-idx="${idx}" data-campo="custoFixoValor" value="${faixa.custoFixoValor}" min="0" step="0.01"></td>
-            <td>${config.faixas.length > 1 ? `<button onclick="removerFaixaMercadoLivre(${idx})">✕</button>` : ''}</td>
-          </tr>`;
+        html += '<div class="info-box">Custo fixo variável conforme faixa de preço e peso.<br><small style="color: var(--text-muted);">Dados apenas para consulta (não editável)</small></div>';
+        
+        // Renderizar matriz de Mercado Livre (peso vs preço)
+        html += '<table class="faixa-table"><thead><tr><th>Faixa de Peso</th>';
+        config.faixasPreco.forEach(faixa => {
+          html += `<th>${faixa.nome}</th>`;
         });
+        html += '</tr></thead><tbody>';
+        
+        config.faixasPeso.forEach((peso, pesoIdx) => {
+          html += `<tr><td><strong>${peso.nome}</strong></td>`;
+          config.faixasPreco.forEach((preco, precoIdx) => {
+            const custoFixo = config.tabela[pesoIdx][precoIdx];
+            html += `<td style="text-align: center;">R$ ${custoFixo.toFixed(2)}</td>`;
+          });
+          html += '</tr>';
+        });
+        
         html += '</tbody></table>';
-        html += '<button class="add-faixa-btn" onclick="adicionarFaixaMercadoLivre()">+ Adicionar Faixa</button>';
       }
 
       configDiv.innerHTML = html;
@@ -716,9 +1074,8 @@
           input.addEventListener('change', salvarFaixasShopee);
         });
       } else if (marketplace === 'mercadolivre') {
-        document.querySelectorAll('.ml-faixa-input').forEach(input => {
-          input.addEventListener('change', salvarFaixasMercadoLivre);
-        });
+        // Mercado Livre: inputs desabilitados, sem listeners
+        // Dados apenas para consulta
       }
     }
 
@@ -794,6 +1151,38 @@
       const config = MARKETPLACES_CONFIG[marketplace];
       if (!config) return null;
       
+      if (marketplace === 'mercadolivre') {
+        // Primeiro encontra a faixa de peso
+        let pesoFaixa = 0;
+        const pesoTotal = PRODUCTS.reduce((total, product) => {
+          const p = document.getElementById(product.pesoId);
+          return total + (p ? parseFloat(p.value) || 0 : 0);
+        }, 0);
+        
+        for (let i = 0; i < config.faixasPeso.length; i++) {
+          if (pesoTotal <= config.faixasPeso[i].pesoAte) {
+            pesoFaixa = i;
+            break;
+          }
+        }
+        
+        // Depois encontra a faixa de preço
+        let precoFaixa = 0;
+        for (let i = 0; i < config.faixasPreco.length; i++) {
+          if (precoFinal <= config.faixasPreco[i].precoAte) {
+            precoFaixa = i;
+            break;
+          }
+        }
+        
+        return {
+          peso: config.faixasPeso[pesoFaixa],
+          preco: config.faixasPreco[precoFaixa],
+          custoFixoValor: config.tabela[pesoFaixa][precoFaixa]
+        };
+      }
+      
+      // Para Shopee
       for (let faixa of config.faixas) {
         if (precoFinal <= faixa.precoAte) {
           return faixa;
@@ -823,9 +1212,20 @@
       // Se está usando um marketplace progressivo, usar cálculo iterativo
       const marketplace = MARKETPLACE_ESTADO.selecionado;
       if (marketplace === 'shopee' || marketplace === 'mercadolivre') {
-        const precoFinal = calcularPrecoProgressivo(b7, b9, b9b, b8, b10, b11, b12, marketplace);
+        let precoFinal;
+        
+        // Se o usuário mudou a MARGEM LUCRO, recalcular b13
+        // Se o usuário mudou o VALOR ANÚNCIO, manter b13 que já foi digitado
+        if (ultimoCampoAlterado === 'margem' || ultimoCampoAlterado === '') {
+          precoFinal = calcularPrecoProgressivo(b7, b9, b9b, b8, b10, b11, b12, marketplace);
+          document.getElementById('b13').value = precoFinal.toFixed(2);
+          ultimoCampoAlterado = ''; // Resetar após processar
+        } else if (ultimoCampoAlterado === 'anuncio') {
+          // Usuário digitou valor anúncio, manter ele como está
+          precoFinal = val('b13');
+        }
+
         document.getElementById('b7').textContent  = brl(b7);
-        document.getElementById('b13').textContent = brl(precoFinal);
 
         // Calcular taxas de acordo com a faixa
         const faixa = obterFaixaAplicavel(precoFinal, marketplace);
@@ -857,6 +1257,7 @@
         }
 
         document.getElementById('warn').style.display = 'none';
+        saveData(); // Salvar dados após cálculo
       } else {
         // Usar cálculo original para uso genérico
         calcOriginal.call(this);
@@ -867,7 +1268,7 @@
       // Cálculo iterativo para encontrar o preço final
       let precoFinal = custoBase * 1.3; // Palpite inicial
       let precision = 0.01;
-      let maxIter = 20;
+      let maxIter = 100;
 
       for (let i = 0; i < maxIter; i++) {
         const faixa = obterFaixaAplicavel(precoFinal, marketplace);
@@ -911,62 +1312,103 @@
     function restoreMarketplaceData() {
       const saved = localStorage.getItem(PERSIST_KEY);
       if (saved) {
-        const data = JSON.parse(saved);
-        if (data.marketplace) {
-          MARKETPLACE_ESTADO.selecionado = data.marketplace;
-          document.getElementById('marketplaceSelect').value = data.marketplace;
+        try {
+          const data = JSON.parse(saved);
           
-          const configBtn = document.getElementById('marketplaceConfigBtn');
-          const taxFixoWrapper = document.getElementById('tax-fixo-wrapper');
-          const taxComissaoWrapper = document.getElementById('tax-comissao-wrapper');
-          
-          if (data.marketplace === 'shopee') {
-            configBtn.style.display = 'block';
-            taxFixoWrapper.style.display = 'none';
-            taxComissaoWrapper.style.display = 'none';
-          } else if (data.marketplace === 'mercadolivre') {
-            configBtn.style.display = 'block';
-            taxFixoWrapper.style.display = 'none';
-            taxComissaoWrapper.style.display = 'grid';
-          } else {
-            configBtn.style.display = 'none';
-            taxFixoWrapper.style.display = 'grid';
-            taxComissaoWrapper.style.display = 'grid';
+          // Restaurar b12_valores
+          if (data.b12_valores) {
+            MARKETPLACE_ESTADO.b12_valores = data.b12_valores;
           }
-        }
-        if (data.shopeeConfig) {
-          MARKETPLACES_CONFIG.shopee = data.shopeeConfig;
-        }
-        if (data.mercadolivreConfig) {
-          MARKETPLACES_CONFIG.mercadolivre = data.mercadolivreConfig;
+          
+          if (data.marketplace) {
+            MARKETPLACE_ESTADO.selecionado = data.marketplace;
+            document.getElementById('marketplaceSelect').value = data.marketplace;
+            
+            const configBtn = document.getElementById('marketplaceConfigBtn');
+            const taxFixoWrapper = document.getElementById('tax-fixo-wrapper');
+            const taxComissaoWrapper = document.getElementById('tax-comissao-wrapper');
+            
+            if (data.marketplace === 'shopee') {
+              configBtn.style.display = 'block';
+              taxFixoWrapper.style.display = 'none';
+              taxComissaoWrapper.style.display = 'none';
+            } else if (data.marketplace === 'mercadolivre') {
+              configBtn.style.display = 'none';
+              taxFixoWrapper.style.display = 'none';
+              taxComissaoWrapper.style.display = 'grid';
+            } else {
+              configBtn.style.display = 'none';
+              taxFixoWrapper.style.display = 'grid';
+              taxComissaoWrapper.style.display = 'grid';
+            }
+          }
+          // APENAS Shopee é editável - restaurar suas faixas
+          if (data.shopeeConfig) {
+            MARKETPLACES_CONFIG.shopee = data.shopeeConfig;
+          }
+        } catch (e) {
+          console.error('Erro ao restaurar dados de marketplace:', e);
         }
       }
     }
 
-    // Modificar saveData para salvar marketplace
-    const saveDataOriginal = saveData;
-    saveData = function() {
-      saveDataOriginal.call(this);
-      
-      const saved = localStorage.getItem(PERSIST_KEY);
-      const data = saved ? JSON.parse(saved) : {};
-      
-      data.marketplace = MARKETPLACE_ESTADO.selecionado;
-      data.shopeeConfig = MARKETPLACES_CONFIG.shopee;
-      data.mercadolivreConfig = MARKETPLACES_CONFIG.mercadolivre;
-      
-      localStorage.setItem(PERSIST_KEY, JSON.stringify(data));
-    };
-
-    restoreMarketplaceData();
-    restoreData();
-    calc();
-
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js');
-      });
+    // Restaurar tudo na sequência correta
+    restoreMarketplaceData();  // PRIMEIRO: restaura marketplace selecionado
+    const temDadosSalvos = restoreData();  // SEGUNDO: cria linhas de produto e restaura taxas
+    
+    // Restaurar b12 de acordo com o marketplace
+    if (MARKETPLACE_ESTADO.b12_valores[MARKETPLACE_ESTADO.selecionado]) {
+      document.getElementById('b12').value = MARKETPLACE_ESTADO.b12_valores[MARKETPLACE_ESTADO.selecionado];
     }
+    
+    atualizarRowsComPeso();    // TERCEIRO: ajusta campos peso
+    
+    // Chamar calc() se há dados salvos para recalcular valores em R$
+    if (temDadosSalvos) {
+      calc();
+    }
+    
+    // ===== TEMA LIGHT/DARK MODE =====
+    function toggleTheme() {
+      const body = document.body;
+      const btn = document.getElementById('themeToggleBtn');
+      
+      if (body.classList.contains('light-mode')) {
+        // Mudar para dark mode
+        body.classList.remove('light-mode');
+        btn.textContent = '🌙 Dark Mode';
+        localStorage.setItem('theme', 'dark');
+      } else {
+        // Mudar para light mode
+        body.classList.add('light-mode');
+        btn.textContent = '☀️ Light Mode';
+        localStorage.setItem('theme', 'light');
+      }
+    }
+    
+    function initTheme() {
+      const savedTheme = localStorage.getItem('theme');
+      const btn = document.getElementById('themeToggleBtn');
+      
+      if (savedTheme === 'light') {
+        document.body.classList.add('light-mode');
+        btn.textContent = '☀️ Light Mode';
+      } else {
+        // Default: dark mode
+        document.body.classList.remove('light-mode');
+        btn.textContent = '🌙 Dark Mode';
+      }
+    }
+    
+    // Inicializar tema ao carregar
+    initTheme();
+
+    // Service Worker desabilitado para teste local com file://
+    // if ('serviceWorker' in navigator) {
+    //   window.addEventListener('load', () => {
+    //     navigator.serviceWorker.register('./sw.js');
+    //   });
+    // }
   </script>
 </body>
 </html>
