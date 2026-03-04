@@ -387,6 +387,23 @@
   </div>
 
   <div class="card">
+    <!-- Campos de dimensão para Mercado Livre (peso cúbico) -->
+    <div id="dimensoes-container" style="display: none; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color);">
+      <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+        <label style="font-weight: 600; color: var(--text-color); font-size: 14px;">Dimensões da Caixa (peso cúbico)</label>
+      </div>
+      <div class="row4">
+        <input type="number" inputmode="decimal" step="0.01" id="ml-altura" placeholder="Altura (cm)" value="0">
+        <input type="number" inputmode="decimal" step="0.01" id="ml-largura" placeholder="Largura (cm)" value="0">
+        <input type="number" inputmode="decimal" step="0.01" id="ml-comprimento" placeholder="Comprimento (cm)" value="0">
+      </div>
+      <div style="display: flex; gap: 10px; margin-top: 8px; padding: 8px; background-color: var(--input-bg); border-radius: 6px; font-size: 13px;">
+        <span style="color: var(--text-muted);">Peso Real: <strong id="ml-peso-real" style="color: var(--text-color);">0 kg</strong></span>
+        <span style="color: var(--text-muted);">| Peso Cúbico: <strong id="ml-peso-cubico" style="color: var(--accent-green);">0 kg</strong></span>
+        <span style="color: var(--text-muted);">| Usado: <strong id="ml-peso-usado" style="color: var(--accent-green);">0 kg</strong></span>
+      </div>
+    </div>
+    
     <div id="items"></div>
 
     <div class="row">
@@ -504,6 +521,12 @@
       // Quando qty ou peso muda, recalcular
       // Se estamos em modo "anuncio" (valor anuncio foi digitado), recalcular margem também
       calc();
+      
+      // Atualizar peso cúbico se em Mercado Livre
+      if (MARKETPLACE_ESTADO.selecionado === 'mercadolivre') {
+        atualizarPesoCubico();
+      }
+      
       if (ultimoCampoAlterado === 'anuncio') {
         // Dar um pequeno delay para calc() processar antes de calcReverso()
         setTimeout(() => {
@@ -582,6 +605,50 @@
     });
     
     // Helper para formatar valor com 2 casas decimais
+    
+    // ===== PESO CÚBICO PARA MERCADO LIVRE =====
+    function atualizarPesoCubico() {
+      const altura = parseFloat(document.getElementById('ml-altura').value) || 0;
+      const largura = parseFloat(document.getElementById('ml-largura').value) || 0;
+      const comprimento = parseFloat(document.getElementById('ml-comprimento').value) || 0;
+      
+      // Calcular peso cúbico: (altura × largura × comprimento) / 6000
+      const pesoCubico = (altura * largura * comprimento) / 6000;
+      
+      // Somar peso dos produtos
+      let pesoReal = 0;
+      PRODUCTS.forEach(product => {
+        const peso = parseFloat(document.getElementById(product.pesoId).value) || 0;
+        const qty = parseFloat(document.getElementById(product.cId).value) || 0;
+        pesoReal += peso * qty;
+      });
+      
+      // Usar o MAIOR entre peso real e peso cúbico
+      const pesoUsado = Math.max(pesoReal, pesoCubico);
+      
+      // Atualizar displays
+      document.getElementById('ml-peso-real').textContent = pesoReal.toFixed(3) + ' kg';
+      document.getElementById('ml-peso-cubico').textContent = pesoCubico.toFixed(3) + ' kg';
+      document.getElementById('ml-peso-usado').textContent = pesoUsado.toFixed(3) + ' kg';
+      
+      // Armazenar peso cúbico para usar em cálculos
+      window.ML_PESO_USADO = pesoUsado;
+      
+      // Recalcular se estamos em Mercado Livre
+      if (MARKETPLACE_ESTADO.selecionado === 'mercadolivre') {
+        calc();
+      }
+    }
+    
+    // Adicionar listeners aos campos de dimensão
+    const mlAltura = document.getElementById('ml-altura');
+    const mlLargura = document.getElementById('ml-largura');
+    const mlComprimento = document.getElementById('ml-comprimento');
+    
+    if (mlAltura) mlAltura.addEventListener('input', atualizarPesoCubico, { passive: true });
+    if (mlLargura) mlLargura.addEventListener('input', atualizarPesoCubico, { passive: true });
+    if (mlComprimento) mlComprimento.addEventListener('input', atualizarPesoCubico, { passive: true });
+    
     // Listener especial para VALOR ANÚNCIO (cálculo reverso)
     const b13Input = document.getElementById('b13');
     if (b13Input) {
@@ -727,7 +794,12 @@
             fixed: {},
             b13: parseFloat(document.getElementById('b13').value || 0).toFixed(2),
             shopeeConfig: MARKETPLACES_CONFIG.shopee,
-            b12_valores: MARKETPLACE_ESTADO.b12_valores // Guardar b12 por marketplace
+            b12_valores: MARKETPLACE_ESTADO.b12_valores, // Guardar b12 por marketplace
+            ml_dimensions: {
+                altura: document.getElementById('ml-altura').value || '',
+                largura: document.getElementById('ml-largura').value || '',
+                comprimento: document.getElementById('ml-comprimento').value || ''
+            }
         };
         FIXED_IDS.forEach(id => {
             const el = document.getElementById(id);
@@ -798,6 +870,21 @@
             createProductRow(ultimoIndex + 1, '', 1, 0, true);
         } else {
             createProductRow(1, '', 1, 0, true);
+        }
+        
+        // Restaurar dimensões do Mercado Livre
+        if (data.ml_dimensions) {
+            if (data.ml_dimensions.altura) {
+                document.getElementById('ml-altura').value = data.ml_dimensions.altura;
+            }
+            if (data.ml_dimensions.largura) {
+                document.getElementById('ml-largura').value = data.ml_dimensions.largura;
+            }
+            if (data.ml_dimensions.comprimento) {
+                document.getElementById('ml-comprimento').value = data.ml_dimensions.comprimento;
+            }
+            // Atualizar cálculo do peso cúbico com as dimensões restauradas
+            setTimeout(() => atualizarPesoCubico(), 100);
         }
         
         return true;
@@ -963,8 +1050,12 @@
         configBtn.style.display = 'block';
         MARKETPLACE_ESTADO.configAberta = false;
         document.getElementById('marketplaceConfig').style.display = 'none';
+        // Mostrar campos de dimensão para peso cúbico
+        document.getElementById('dimensoes-container').style.display = 'block';
         // Restaurar b12 que era para Mercado Livre
         document.getElementById('b12').value = MARKETPLACE_ESTADO.b12_valores.mercadolivre;
+        // Atualizar peso cúbico ao selecionar
+        atualizarPesoCubico();
       } else {
         // Genérico e Outros: mostra todos os campos
         taxFixoWrapper.style.display = 'grid';
@@ -972,6 +1063,8 @@
         configBtn.style.display = 'none';
         document.getElementById('marketplaceConfig').style.display = 'none';
         MARKETPLACE_ESTADO.configAberta = false;
+        // Esconder campos de dimensão
+        document.getElementById('dimensoes-container').style.display = 'none';
         // Restaurar b12 que era para Genérico
         document.getElementById('b12').value = MARKETPLACE_ESTADO.b12_valores.generico;
       }
@@ -1152,15 +1245,12 @@
       if (!config) return null;
       
       if (marketplace === 'mercadolivre') {
-        // Primeiro encontra a faixa de peso
+        // Usar peso cúbico (já calculado em atualizarPesoCubico)
         let pesoFaixa = 0;
-        const pesoTotal = PRODUCTS.reduce((total, product) => {
-          const p = document.getElementById(product.pesoId);
-          return total + (p ? parseFloat(p.value) || 0 : 0);
-        }, 0);
+        const pesoAUsar = window.ML_PESO_USADO || 0;
         
         for (let i = 0; i < config.faixasPeso.length; i++) {
-          if (pesoTotal <= config.faixasPeso[i].pesoAte) {
+          if (pesoAUsar <= config.faixasPeso[i].pesoAte) {
             pesoFaixa = i;
             break;
           }
