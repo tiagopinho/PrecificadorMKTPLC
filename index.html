@@ -8,7 +8,7 @@
   <!-- <link rel="manifest" href="manifest.webmanifest"> -->
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="icon" type="image/png" href="icons/icon-192.png">
-  <title>Precificador Markup</title>
+  <title>Calculadora Markup 2026</title>
   <style>
     :root{
       color-scheme: dark;
@@ -359,7 +359,7 @@
 </head>
 <body>
   <div class="header-container">
-    <h1>Precificador Markup</h1>
+    <h1>Calc Markup 2026</h1>
     <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Alternar tema">🌙 Dark Mode</button>
   </div>
 
@@ -414,6 +414,34 @@
     <button class="reset-button" onclick="resetProducts()">Zerar Produtos</button>
   </div>
 
+  <!-- Card de Promoção -->
+  <div class="card">
+    <button id="promoToggleBtn" onclick="togglePromoSection()" style="width: 100%; padding: 10px; background: var(--bg-card); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; justify-content: space-between;">
+      <span>🎉 Promoção</span>
+      <span id="promoToggleIcon" style="font-size: 14px;">▼</span>
+    </button>
+
+    <div id="promoSection" style="display: none; margin-top: 15px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+      <div style="margin-bottom: 15px;">
+        <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 10px;">💡 Adicione cupons para calcular o preço necessário mantendo sua margem</div>
+        <div id="couponsList"></div>
+        <button id="addCouponBtn" onclick="addCoupon()" style="width: 100%; padding: 10px; background: var(--accent-green); color: #000; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-top: 10px;">+ Adicionar Cupom</button>
+      </div>
+      <div style="padding: 10px; background: var(--input-bg); border-radius: 6px; border: 1px solid var(--border-color);">
+        <div style="color: var(--text-muted); font-size: 12px; margin-bottom: 5px;">Desconto Total:</div>
+        <div style="font-size: 18px; font-weight: 700; color: var(--accent-red);">
+          <span id="totalCouponDiscount">0</span>% = <span id="totalCouponDiscountValue">R$ 0,00</span>
+        </div>
+      </div>
+      <div style="margin-top: 10px; padding: 10px; background: var(--input-bg); border-radius: 6px; border: 1px solid var(--border-color);">
+        <div style="color: var(--text-muted); font-size: 12px; margin-bottom: 5px;">Preço de Anúncio Necessário (mantendo margem):</div>
+        <div style="font-size: 18px; font-weight: 700; color: var(--accent-green);">
+          <span id="calculatedPriceWithCoupons">R$ 0,00</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="card">
     <div class="rowpct">
       <label class="compact-label">MARGEM LUCRO (%)</label>
@@ -453,7 +481,10 @@
     <div id="warn" class="warn muted" style="display:none;">⚠️ A soma dos percentuais (lucro + impostos + fixo + comissão) precisa ser menor que 100%.</div>
     <div style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
       <label style="flex: 1;">VALOR ANÚNCIO</label>
-      <input type="number" inputmode="decimal" step="0.01" id="b13" placeholder="0,00" style="flex: 1; max-width: 140px; padding: 10px; border-radius: 8px; border: 1px solid var(--input-border); background-color: var(--input-bg); color: var(--accent-green); font-size: 16px; font-weight: 700; text-align: right;">
+      <input type="number" inputmode="decimal" step="0.01" id="b13" placeholder="0,00" readonly style="flex: 1; max-width: 140px; padding: 10px; border-radius: 8px; border: 1px solid var(--input-border); background-color: var(--input-bg); color: var(--accent-green); font-size: 16px; font-weight: 700; text-align: right;">
+    </div>
+    <div id="faixaInfo" style="display: none; margin-top: 12px; padding: 10px; background: rgba(100,150,200,0.15); border-left: 3px solid #64a8d8; border-radius: 4px; font-size: 13px; color: var(--text-muted);">
+      <div id="faixaTexto">-</div>
     </div>
   </div>
 
@@ -470,6 +501,13 @@
     
     // Rastreamento para cálculo bidirecional
     let ultimoCampoAlterado = ''; // 'margem', 'anuncio', ou ''
+    let atualizandoDeCupons = false; // Flag para evitar loop ao sincronizar cupons
+    let atualizandoDeCalc = false; // Flag para evitar calcReverso quando calc() atualiza b13
+    
+    // ===== GERENCIAMENTO DE CUPONS (PROMOÇÃO) =====
+    let COUPONS = [];
+    let couponCounter = 0;
+    let b13Base = 0; // Guardar o valor base de b13 (sem cupons) para usar como referência
 
     function createProductRow(index, costValue = '', qtyValue = 1, pesoValue = 0, isVisible = false) {
       productCounter = index; 
@@ -636,6 +674,8 @@
       
       // Recalcular se estamos em Mercado Livre
       if (MARKETPLACE_ESTADO.selecionado === 'mercadolivre') {
+        // IMPORTANTE: Resetar ultimoCampoAlterado para forçar recálculo do preço (não mantém valor antigo)
+        ultimoCampoAlterado = '';
         calc();
       }
     }
@@ -653,6 +693,9 @@
     const b13Input = document.getElementById('b13');
     if (b13Input) {
       b13Input.addEventListener('input', function() {
+        // Ignorar se está vindo de atualização de cupons ou de calc()
+        if (atualizandoDeCupons || atualizandoDeCalc) return;
+        
         let numValue = parseFloat(this.value.replace(',', '.')) || 0;
         // Só fazer cálculo reverso se o valor é maior que 0
         if (numValue > 0) {
@@ -691,12 +734,32 @@
       const comissaoR = b13 * b12;
 
       document.getElementById('b7').textContent  = brl(b7);
+      
+      // Guardar o valor base de b13 (sem cupons) para usar em calculatePriceWithCoupons
+      b13Base = b13;
+      
+      // Atualizar b13 sem disparar calcReverso
+      atualizandoDeCalc = true;
       document.getElementById('b13').value = b13.toFixed(2);
+      atualizandoDeCalc = false;
 
       document.getElementById('r_b8').textContent  = brl(margemR);
       document.getElementById('r_b10').textContent = brl(impostoR);
       document.getElementById('r_b11').textContent = brl(fixoR);
       document.getElementById('r_b12').textContent = brl(comissaoR);
+
+      // Sincronizar exibição dos cupons (se houver)
+      if (COUPONS && COUPONS.length > 0) {
+        // Passar o preço calculado como base para os cupons
+        setTimeout(() => {
+          calculatePriceWithCoupons(b13);
+        }, 0);
+      } else {
+        // Mesmo sem cupons, resetar a exibição
+        document.getElementById('totalCouponDiscount').textContent = '0';
+        document.getElementById('totalCouponDiscountValue').textContent = 'R$ 0,00';
+        document.getElementById('calculatedPriceWithCoupons').textContent = brl(b13);
+      }
 
       saveData();
     }
@@ -799,7 +862,8 @@
                 altura: document.getElementById('ml-altura').value || '',
                 largura: document.getElementById('ml-largura').value || '',
                 comprimento: document.getElementById('ml-comprimento').value || ''
-            }
+            },
+            coupons: COUPONS // Salvar cupons
         };
         FIXED_IDS.forEach(id => {
             const el = document.getElementById(id);
@@ -851,7 +915,9 @@
         }
         
         if (data.b13) {
-            document.getElementById('b13').value = parseFloat(data.b13).toFixed(2);
+            const value = parseFloat(data.b13).toFixed(2);
+            document.getElementById('b13').value = value;
+            b13Base = parseFloat(value); // Também restaurar b13Base
         }
         
         // DEPOIS: Restaurar produtos
@@ -885,6 +951,19 @@
             }
             // Atualizar cálculo do peso cúbico com as dimensões restauradas
             setTimeout(() => atualizarPesoCubico(), 100);
+        }
+        
+        // Restaurar cupons (promoções)
+        if (data.coupons && data.coupons.length > 0) {
+            COUPONS = data.coupons;
+            couponCounter = Math.max(...COUPONS.map(c => {
+                const matches = c.id.match(/\d+$/);
+                return matches ? parseInt(matches[0]) : 0;
+            })) || 0;
+            updateCouponsDisplay();
+        } else {
+            COUPONS = [];
+            couponCounter = 0;
         }
         
         return true;
@@ -1042,6 +1121,7 @@
         MARKETPLACE_ESTADO.configAberta = false;
         document.getElementById('marketplaceConfig').style.display = 'none';
         document.getElementById('b12').value = ''; // Zero durante Shopee
+        document.getElementById('dimensoes-container').style.display = 'none'; // Esconder medidas para Shopee
       } else if (this.value === 'mercadolivre') {
         // Mercado Livre: esconde Custo Fixo (usa tabela fixa, não configurável)
         // Mas mostra o botão para visualizar (sem edição)
@@ -1281,6 +1361,35 @@
       return config.faixas[config.faixas.length - 1];
     }
 
+    // Função para atualizar a exibição da faixa de preço
+    function atualizarExibicaoFaixa(precoFinal, marketplace) {
+      const faixaInfo = document.getElementById('faixaInfo');
+      const faixaTexto = document.getElementById('faixaTexto');
+      
+      if (!faixaInfo || !faixaTexto) return;
+      
+      if (marketplace === 'mercadolivre' || marketplace === 'shopee') {
+        const faixa = obterFaixaAplicavel(precoFinal, marketplace);
+        
+        if (marketplace === 'mercadolivre' && faixa) {
+          // Mostrar faixa de peso para ML
+          const pesoUsado = window.ML_PESO_USADO || 0;
+          const comissao = faixa.percentual ? faixa.percentual.toFixed(2) : '0';
+          const custoFixo = faixa.custoFixoValor ? brl(faixa.custoFixoValor) : 'Nenhum';
+          faixaTexto.innerHTML = `📦 <strong>Faixa ML:</strong> ${faixa.pesoATe}kg | Comissão: ${comissao}% | Custo Fixo: ${custoFixo}`;
+          faixaInfo.style.display = 'block';
+        } else if (marketplace === 'shopee' && faixa) {
+          // Mostrar faixa de preço para Shopee
+          const comissao = faixa.percentual ? faixa.percentual.toFixed(2) : '0';
+          const fixo = faixa.fixo ? brl(faixa.fixo) : 'Nenhum';
+          faixaTexto.innerHTML = `🛒 <strong>Faixa Shopee:</strong> até ${brl(faixa.precoAte)} | Comissão: ${comissao}% + ${fixo}`;
+          faixaInfo.style.display = 'block';
+        }
+      } else {
+        faixaInfo.style.display = 'none';
+      }
+    }
+
     // Modificar a função de cálculo para suportar marketplaces progressivos
     // Override da função calc() para usar Marketplace Config
     const calcOriginal = calc;
@@ -1314,6 +1423,9 @@
           // Usuário digitou valor anúncio, manter ele como está
           precoFinal = val('b13');
         }
+        
+        // Guardar o valor base de b13 (sem cupons) para usar em calculatePriceWithCoupons
+        b13Base = precoFinal;
 
         document.getElementById('b7').textContent  = brl(b7);
 
@@ -1347,6 +1459,22 @@
         }
 
         document.getElementById('warn').style.display = 'none';
+        
+        // Atualizar exibição da faixa de preço
+        atualizarExibicaoFaixa(precoFinal, marketplace);
+        
+        // Sincronizar cupons se houver
+        if (COUPONS && COUPONS.length > 0) {
+          setTimeout(() => {
+            updateCouponCalculations();
+          }, 0);
+        } else {
+          // Mesmo sem cupons, mostrar o preço base
+          document.getElementById('totalCouponDiscount').textContent = '0';
+          document.getElementById('totalCouponDiscountValue').textContent = 'R$ 0,00';
+          document.getElementById('calculatedPriceWithCoupons').textContent = brl(precoFinal);
+        }
+        
         saveData(); // Salvar dados após cálculo
       } else {
         // Usar cálculo original para uso genérico
@@ -1492,6 +1620,459 @@
     
     // Inicializar tema ao carregar
     initTheme();
+
+    function togglePromoSection() {
+      const section = document.getElementById('promoSection');
+      const icon = document.getElementById('promoToggleIcon');
+      
+      if (section.style.display === 'none') {
+        section.style.display = 'block';
+        icon.textContent = '▲';
+      } else {
+        section.style.display = 'none';
+        icon.textContent = '▼';
+      }
+    }
+
+    function addCoupon() {
+      couponCounter++;
+      const couponId = 'coupon-' + couponCounter;
+      const newCoupon = { id: couponId, description: '', discount: 0 };
+      COUPONS.push(newCoupon);
+      updateCouponsDisplay();
+      saveData();
+    }
+
+    function removeCoupon(couponId) {
+      COUPONS = COUPONS.filter(c => c.id !== couponId);
+      
+      // Se apagou o último cupom, restaurar b13 para seu valor original (b13Base)
+      if (COUPONS.length === 0 && b13Base > 0) {
+        atualizandoDeCupons = true;
+        document.getElementById('b13').value = b13Base.toFixed(2);
+        atualizandoDeCupons = false;
+      }
+      
+      updateCouponsDisplay();
+      saveData();
+    }
+
+    function updateCouponsDisplay() {
+      const couponsList = document.getElementById('couponsList');
+      couponsList.innerHTML = '';
+
+      if (COUPONS.length === 0) {
+        couponsList.innerHTML = '<div style="color: var(--text-muted); font-size: 13px; padding: 10px; text-align: center;">Nenhum cupom adicionado</div>';
+        document.getElementById('totalCouponDiscount').textContent = '0';
+        document.getElementById('totalCouponDiscountValue').textContent = 'R$ 0,00';
+        document.getElementById('calculatedPriceWithCoupons').textContent = 'R$ 0,00';
+        return;
+      }
+
+      COUPONS.forEach(coupon => {
+        const couponDiv = document.createElement('div');
+        couponDiv.style.display = 'grid';
+        couponDiv.style.gridTemplateColumns = '1fr 80px 35px';
+        couponDiv.style.gap = '8px';
+        couponDiv.style.alignItems = 'center';
+        couponDiv.style.marginBottom = '8px';
+        couponDiv.style.padding = '10px';
+        couponDiv.style.background = 'var(--input-bg)';
+        couponDiv.style.borderRadius = '6px';
+        couponDiv.style.border = '1px solid var(--border-color)';
+
+        const descInput = document.createElement('input');
+        descInput.type = 'text';
+        descInput.placeholder = 'Descrição (ex: 10% - Cupom Novo Cliente)';
+        descInput.value = coupon.description;
+        descInput.style.padding = '8px';
+        descInput.style.background = 'var(--input-bg)';
+        descInput.style.border = '1px solid var(--border-color)';
+        descInput.style.borderRadius = '4px';
+        descInput.style.color = 'var(--text-color)';
+        descInput.style.fontSize = '13px';
+        descInput.addEventListener('input', (e) => {
+          COUPONS.find(c => c.id === coupon.id).description = e.target.value;
+          saveData();
+        });
+
+        const discountInput = document.createElement('input');
+        discountInput.type = 'number';
+        discountInput.inputMode = 'decimal';
+        discountInput.step = '0.01';
+        discountInput.placeholder = '%';
+        discountInput.value = coupon.discount === 0 ? '' : coupon.discount;
+        discountInput.style.padding = '8px';
+        discountInput.style.background = 'var(--input-bg)';
+        discountInput.style.border = '1px solid var(--input-border)';
+        discountInput.style.borderRadius = '4px';
+        discountInput.style.color = 'var(--text-color)';
+        discountInput.style.fontSize = '13px';
+        discountInput.style.textAlign = 'right';
+        discountInput.addEventListener('input', (e) => {
+          COUPONS.find(c => c.id === coupon.id).discount = parseFloat(e.target.value) || 0;
+          updateCouponCalculations(); // Apenas atualiza totais, sem reconstruir inputs
+          saveData();
+        });
+
+        const removeBtn = document.createElement('button');
+        removeBtn.textContent = '✕';
+        removeBtn.style.background = 'var(--accent-red)';
+        removeBtn.style.color = 'white';
+        removeBtn.style.border = 'none';
+        removeBtn.style.borderRadius = '4px';
+        removeBtn.style.cursor = 'pointer';
+        removeBtn.style.fontWeight = '600';
+        removeBtn.style.padding = '6px 8px';
+        removeBtn.style.fontSize = '14px';
+        removeBtn.addEventListener('click', () => removeCoupon(coupon.id));
+
+        couponDiv.appendChild(descInput);
+        couponDiv.appendChild(discountInput);
+        couponDiv.appendChild(removeBtn);
+        couponsList.appendChild(couponDiv);
+      });
+
+      // Atualizar totais
+      calculatePriceWithCoupons();
+    }
+
+    function updateCouponCalculations() {
+      // Atualiza apenas os valores calculados (totais) sem reconstruir os inputs
+      const totalDiscountPct = COUPONS.reduce((sum, c) => sum + (c.discount || 0), 0);
+      document.getElementById('totalCouponDiscount').textContent = totalDiscountPct.toFixed(2);
+      
+      const b13Current = val('b13');
+      if (b13Current > 0 && totalDiscountPct > 0) {
+        const discountValue = (totalDiscountPct * b13Current) / 100;
+        document.getElementById('totalCouponDiscountValue').textContent = brl(discountValue);
+      } else {
+        document.getElementById('totalCouponDiscountValue').textContent = 'R$ 0,00';
+      }
+      
+      // Chamar calculatePriceWithCoupons para sincronizar o preço necessário
+      calculatePriceWithCoupons();
+    }
+
+    function calculatePriceWithCoupons(basePrice = null) {
+      // Somar todos os descontos dos cupons
+      const totalDiscountPct = COUPONS.reduce((sum, c) => sum + (c.discount || 0), 0);
+      
+      const b13Value = val('b13');
+      const marketplace = MARKETPLACE_ESTADO.selecionado;
+      
+      // Se NÃO há cupons, resetar b13Base para o valor atual e NÃO modificar b13
+      if (totalDiscountPct === 0) {
+        b13Base = b13Value; // Guardar o preço "original" (sem cupons)
+        // Apenas atualizar as exibições, sem recalcular b13
+        document.getElementById('totalCouponDiscount').textContent = '0';
+        document.getElementById('totalCouponDiscountValue').textContent = 'R$ 0,00';
+        document.getElementById('calculatedPriceWithCoupons').textContent = brl(b13Value);
+        
+        // Atualizar valores das taxas em reais
+        const b8 = pct('b8'), b10 = pct('b10'), b11 = pct('b11'), b12 = pct('b12');
+        const margemR   = b13Value * b8;
+        const impostoR  = b13Value * b10;
+        const fixoR     = b13Value * b11;
+        const comissaoR = b13Value * b12;
+        
+        document.getElementById('r_b8').textContent  = brl(margemR);
+        document.getElementById('r_b10').textContent = brl(impostoR);
+        document.getElementById('r_b11').textContent = brl(fixoR);
+        document.getElementById('r_b12').textContent = brl(comissaoR);
+        
+        // Atualizar exibição da faixa
+        atualizarExibicaoFaixa(b13Value, marketplace);
+        return;
+      }
+      
+      // Se há cupons, usar b13Base como referência (preço original sem cupons)
+      let b13Current;
+      if (basePrice !== null && basePrice > 0) {
+        // Vindo de calc(), usar o basePrice passado
+        b13Current = basePrice;
+        b13Base = basePrice; // Guardar como referência
+      } else {
+        // Vindo de editação de cupom
+        b13Current = b13Base > 0 ? b13Base : b13Value;
+      }
+      
+      // Mostrar desconto total
+      document.getElementById('totalCouponDiscount').textContent = totalDiscountPct.toFixed(2);
+      
+      if (b13Current > 0 && totalDiscountPct > 0 && totalDiscountPct < 100) {
+        // Para Mercado Livre com cupom: refazer o cálculo iterativo considerando o cupom!
+        if (marketplace === 'mercadolivre') {
+          // Cálculo iterativo que considera o cupom desde o início
+          const b7 = (() => {
+            let soma = 0;
+            PRODUCTS.forEach(product => {
+              const bi = val(product.bId);
+              const ci = parseFloat(document.getElementById(product.cId).value) || 0;
+              soma += bi * ci;
+            });
+            const discountPct = pct('discount');
+            return soma * (1 - discountPct);
+          })();
+          
+          const b9 = val('b9'), b9b = val('b9b');
+          const b8 = pct('b8'), b10 = pct('b10'), b11 = pct('b11'), b12 = pct('b12');
+          
+          // Cálculo iterativo: encontrar preço que mantenha margem DEPOIS de cupom aplicado
+          let priceFinal = b13Current * 1.2; // Palpite inicial
+          let precision = 0.01;
+          let maxIter = 100;
+          const discountFraction = totalDiscountPct / 100;
+          
+          for (let i = 0; i < maxIter; i++) {
+            const faixa = obterFaixaAplicavel(priceFinal, 'mercadolivre');
+            if (!faixa) {
+              break;
+            }
+            
+            // Preço que cliente paga (com cupom)
+            const priceClientPays = priceFinal * (1 - discountFraction);
+            
+            // Taxas percentuais aplicadas ao que cliente paga
+            const taxasPercentuais = b10 + b11 + b12 + b8; // imposto + extra + comissão + margem
+            
+            // Custo fixo vem da faixa
+            const taxasFixas = faixa.custoFixoValor || 0;
+            
+            // Equação principal:
+            // priceClientPays = (custoBase + frete + embalagem + custoFixo + taxasPercentuais*priceClientPays)
+            // Resolvendo para priceFinal:
+            const novoPreco = (b7 + b9 + b9b + taxasFixas) / ((1 - discountFraction) * (1 - taxasPercentuais));
+            
+            if (Math.abs(novoPreco - priceFinal) < precision) {
+              priceFinal = novoPreco;
+              break;
+            }
+            priceFinal = novoPreco;
+          }
+          
+          const priceWithCoupon = priceFinal * (1 - discountFraction);
+          
+          // Atualizar exibições
+          const discountValue = (totalDiscountPct * priceFinal) / 100;
+          document.getElementById('totalCouponDiscountValue').textContent = brl(discountValue);
+          document.getElementById('calculatedPriceWithCoupons').textContent = brl(priceFinal);
+          
+          // SINCRONIZAR: Atualizar b13 com o preço necessário
+          atualizandoDeCupons = true;
+          document.getElementById('b13').value = priceFinal.toFixed(2);
+          
+          // Calcular percentuais sobre o que cliente realmente paga
+          const margemR   = priceWithCoupon * b8;
+          const impostoR  = priceWithCoupon * b10;
+          const extraR    = priceWithCoupon * b11;
+          const comissaoR = priceWithCoupon * b12;
+          
+          document.getElementById('r_b8').textContent  = brl(margemR);
+          document.getElementById('r_b10').textContent = brl(impostoR);
+          document.getElementById('r_b11').textContent = brl(extraR);
+          document.getElementById('r_b12').textContent = brl(comissaoR);
+          
+          // Atualizar exibição da faixa
+          atualizarExibicaoFaixa(priceFinal, 'mercadolivre');
+          
+          atualizandoDeCupons = false;
+        } else {
+          // Para Shopee e Genérico: cálculo simples
+          const discountFraction = totalDiscountPct / 100;
+          const priceNeeded = b13Current / (1 - discountFraction);
+          const priceFinal = parseFloat(priceNeeded.toFixed(2));
+          
+          // Atualizar exibições
+          const discountValue = (totalDiscountPct * priceFinal) / 100;
+          document.getElementById('totalCouponDiscountValue').textContent = brl(discountValue);
+          document.getElementById('calculatedPriceWithCoupons').textContent = brl(priceFinal);
+          
+          // SINCRONIZAR: Atualizar b13 com o preço necessário
+          atualizandoDeCupons = true;
+          document.getElementById('b13').value = priceFinal.toFixed(2);
+          
+          // Calcular o preço que o cliente REALMENTE paga (com cupom)
+          const priceCustomerPays = priceFinal * (1 - discountFraction);
+          
+          // Para genérico e Shopee: apenas recalcular valores em reais
+          const b8 = pct('b8'), b10 = pct('b10'), b11 = pct('b11'), b12 = pct('b12');
+          const margemR   = priceCustomerPays * b8;
+          const impostoR  = priceCustomerPays * b10;
+          const fixoR     = priceCustomerPays * b11;
+          const comissaoR = priceCustomerPays * b12;
+          
+          document.getElementById('r_b8').textContent  = brl(margemR);
+          document.getElementById('r_b10').textContent = brl(impostoR);
+          document.getElementById('r_b11').textContent = brl(fixoR);
+          document.getElementById('r_b12').textContent = brl(comissaoR);
+          
+          atualizandoDeCupons = false;
+        }
+      }
+    }
+
+    // Listener para recalcular cupons quando b13 muda
+    const b13InputListener = document.getElementById('b13');
+    if (b13InputListener) {
+      b13InputListener.addEventListener('input', () => {
+        calculatePriceWithCoupons();
+      }, { passive: true });
+    }
+
+    // ===== FUNÇÃO DE DEBUG PARA TESTES =====
+    window.testarValores = function() {
+      try {
+        console.log('=== TESTE DE VALORES ===');
+        console.log('Marketplace:', MARKETPLACE_ESTADO.selecionado);
+        
+        // Ler valores atuais do formulário COM VERIFICAÇÃO
+        const b1Elem = document.getElementById('b1');
+        const c1Elem = document.getElementById('c1');
+        const p1Elem = document.getElementById('p1');
+        
+        if (!b1Elem) {
+          console.error('Erro: elemento b1 não encontrado!');
+          return;
+        }
+        
+        const b1 = val('b1');
+        const c1 = parseFloat(c1Elem?.value) || 0;
+        const p1 = parseFloat(p1Elem?.value) || 0;
+        const discount = pct('discount');
+        const b8 = pct('b8');
+        const b9 = val('b9');
+        const b9b = val('b9b');
+        const b10 = pct('b10');
+        const b11 = pct('b11');
+        const b12 = pct('b12');
+        const b13 = val('b13');
+        const altura = parseFloat(document.getElementById('ml-altura')?.value) || 0;
+        const largura = parseFloat(document.getElementById('ml-largura')?.value) || 0;
+        const comprimento = parseFloat(document.getElementById('ml-comprimento')?.value) || 0;
+        
+        console.log(`Produto 1 Custo: ${b1}, Qtd: ${c1}, Peso: ${p1}`);
+        console.log(`Dimensões: ${altura}x${largura}x${comprimento}`);
+        console.log(`Desconto Custo: ${(discount*100).toFixed(2)}%`);
+        console.log(`Margem: ${(b8*100).toFixed(2)}%, Imposto: ${(b10*100).toFixed(2)}%, Taxa Extra: ${(b11*100).toFixed(2)}%, Comissão: ${(b12*100).toFixed(2)}%`);
+        console.log(`Frete: ${b9}, Embalagem: ${b9b}`);
+        
+        // Calcular peso cúbico
+        const pesoCubico = (altura * largura * comprimento) / 6000;
+        const pesoReal = p1 * c1;
+        const pesoUsado = Math.max(pesoReal, pesoCubico);
+        console.log(`Peso Real: ${pesoReal.toFixed(3)} kg, Peso Cúbico: ${pesoCubico.toFixed(3)} kg, Peso Usado: ${pesoUsado.toFixed(3)} kg`);
+        
+        // Calcular como o código faz
+        const soma = b1 * c1;
+        const b7 = soma * (1 - discount);
+        const somaPct = b8 + b10 + b11 + b12;
+        const denom = 1 - somaPct;
+        const b13calculado = (b7 + b9 + b9b) / denom;
+        
+        console.log(`--- CÁLCULOS ---`);
+        console.log(`Soma Custo: ${soma.toFixed(2)}`);
+        console.log(`Custo com desconto (b7): ${b7.toFixed(2)}`);
+        console.log(`Soma %: ${(somaPct*100).toFixed(2)}%`);
+        console.log(`Denominador (1 - soma%): ${denom.toFixed(4)}`);
+        console.log(`Preço SEM cupom (b13 calculado): ${b13calculado.toFixed(2)}`);
+        console.log(`b13Base armazenado: ${b13Base.toFixed(2)}`);
+        console.log(`Preço ANÚNCIO no DOM (b13): ${b13.toFixed(2)}`);
+        
+        // Cupons
+        const totalDesconto = COUPONS.reduce((sum, c) => sum + (c.discount || 0), 0);
+        console.log(`--- CUPONS ---`);
+        console.log(`Cupons: ${COUPONS.length}, Desconto Total: ${totalDesconto.toFixed(2)}%`);
+        
+        if (totalDesconto > 0) {
+          const precoComCupom = b13calculado / (1 - totalDesconto/100);
+          console.log(`Preço COM cupom (${totalDesconto}%): ${precoComCupom.toFixed(2)}`);
+          const displayField = document.getElementById('calculatedPriceWithCoupons')?.textContent;
+          console.log(`Campo Exibição 'Preço de Anúncio Necessário': ${displayField}`);
+        }
+        
+        console.log('======================');
+      } catch (err) {
+        console.error('Erro em testarValores:', err);
+      }
+    };
+
+    // Função para popular os valores de teste automaticamente
+    window.preencherTeste = function() {
+      console.log('Iniciando preencherTeste...');
+      
+      // Verificar se elemento b1 existe, se não, criar
+      if (!document.getElementById('b1')) {
+        console.log('Criando primeira linha de produto...');
+        createProductRow(1, '', 1, 0, true);
+      }
+      
+      // Marketplace Mercado Livre
+      const marketplaceSelect = document.getElementById('marketplaceSelect');
+      if (marketplaceSelect) {
+        marketplaceSelect.value = 'mercadolivre';
+        marketplaceSelect.dispatchEvent(new Event('change'));
+        console.log('Marketplace selecionado: mercadolivre');
+      }
+      
+      // Usar setTimeout para garantir que os elementos foram criados
+      setTimeout(() => {
+        try {
+          // Dados do teste
+          const b1 = document.getElementById('b1');
+          const c1 = document.getElementById('c1');
+          const p1 = document.getElementById('p1');
+          const discount = document.getElementById('discount');
+          const altura = document.getElementById('ml-altura');
+          const largura = document.getElementById('ml-largura');
+          const comprimento = document.getElementById('ml-comprimento');
+          const b8 = document.getElementById('b8');
+          const b9 = document.getElementById('b9');
+          const b9b = document.getElementById('b9b');
+          const b10 = document.getElementById('b10');
+          const b11 = document.getElementById('b11');
+          const b12 = document.getElementById('b12');
+          
+          if (b1) b1.value = '100';
+          if (c1) c1.value = '1';
+          if (p1) p1.value = '1';
+          if (discount) discount.value = '50';
+          if (altura) altura.value = '20';
+          if (largura) largura.value = '20';
+          if (comprimento) comprimento.value = '20';
+          if (b8) b8.value = '20';
+          if (b9) b9.value = '0';
+          if (b9b) b9b.value = '0';
+          if (b10) b10.value = '11';
+          if (b11) b11.value = '2';
+          if (b12) b12.value = '16.5';
+          
+          console.log('Valores preenchidos!');
+          
+          // Disparar eventos para recalcular
+          if (b1) b1.dispatchEvent(new Event('input'));
+          if (discount) discount.dispatchEvent(new Event('input'));
+          
+          // Adicionar cupom de 10%
+          console.log('Adicionando cupom de 10%...');
+          addCoupon();
+          
+          // Esperar um pouco para o cupom ser criado
+          setTimeout(() => {
+            // Preencher o desconto do cupom
+            const cupomInputs = document.querySelectorAll('#couponsList input[type="number"]');
+            if (cupomInputs && cupomInputs.length > 0) {
+              cupomInputs[0].value = '10';
+              cupomInputs[0].dispatchEvent(new Event('input'));
+              console.log('Cupom preenchido com 10%');
+            }
+            console.log('✓ Teste configurado! Chamar testarValores() para ver os cálculos');
+          }, 100);
+        } catch (err) {
+          console.error('Erro ao preencher:', err);
+        }
+      }, 500);
+    };
 
     // Service Worker desabilitado para teste local com file://
     // if ('serviceWorker' in navigator) {
