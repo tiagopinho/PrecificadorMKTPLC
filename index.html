@@ -10,37 +10,39 @@
   <link rel="icon" type="image/png" href="icons/icon-192.png">
   <title>Calculadora Markup 2026</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&display=swap');
+    
     :root{
       color-scheme: dark;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', 'Helvetica Neue', sans-serif;
       --label-size: 15px;
       --input-size: 16px;
-      --input-pad: 10px;
+      --input-pad: 12px;
       --input-width: 100%;
       
-      /* Tema escuro (padrão) */
+      /* Tema escuro (padrão) - iOS Dark */
       --bg-body: #000000;
-      --bg-card: #1a1a1a;
-      --border-color: #333333;
+      --bg-card: #1c1c1e;
+      --border-color: #3a3a3c;
       --text-color: #ffffff;
-      --text-muted: #888888;
-      --input-bg: #2a2a2a;
-      --input-border: #404040;
-      --accent-green: #00ff88;
+      --text-muted: #8e8e93;
+      --input-bg: #2c2c2e;
+      --input-border: #3a3a3c;
+      --accent-green: #34c759;
       --accent-red: #ff3b30;
     }
     
     /* Tema claro */
     body.light-mode {
       color-scheme: light;
-      --bg-body: #f5f5f5;
+      --bg-body: #f2f2f7;
       --bg-card: #ffffff;
-      --border-color: #e0e0e0;
+      --border-color: #e5e5ea;
       --text-color: #000000;
-      --text-muted: #666666;
-      --input-bg: #f0f0f0;
-      --input-border: #d0d0d0;
-      --accent-green: #00aa00;
+      --text-muted: #8e8e93;
+      --input-bg: #f2f2f7;
+      --input-border: #e5e5ea;
+      --accent-green: #34c759;
       --accent-red: #ff3b30;
     }
     
@@ -57,15 +59,20 @@
     }
     
     .theme-toggle-btn {
-      padding: 8px 16px;
-      border: 1px solid var(--input-border);
+      padding: 10px 18px;
+      border: none;
       background-color: var(--input-bg);
       color: var(--text-color);
-      border-radius: 8px;
+      border-radius: 12px;
       cursor: pointer;
       font-size: 14px;
       font-weight: 600;
       transition: all 0.3s ease;
+    }
+    
+    .theme-toggle-btn:active {
+      background-color: var(--border-color);
+      transform: scale(0.95);
     }
     
     .theme-toggle-btn:hover {
@@ -77,15 +84,36 @@
       background-color: var(--bg-body);
       color: var(--text-color);
     }
-    body{ padding:12px; -webkit-text-size-adjust:100%; }
-    h1{ margin:0 0 16px 0; font-size:1.4rem; color: var(--text-color); }
+    body{ 
+      padding: 16px; 
+      -webkit-text-size-adjust: 100%;
+      -webkit-font-smoothing: antialiased;
+    }
+    h1{ 
+      margin: 0 0 24px 0; 
+      font-size: 1.8rem; 
+      color: var(--text-color);
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
     
     .card{
       background-color: var(--bg-card);
-      border:1px solid var(--border-color);
-      border-radius:12px; 
-      padding:14px; 
-      margin-bottom:12px;
+      border: none;
+      border-radius: 20px; 
+      padding: 18px; 
+      margin-bottom: 14px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+      transition: all 0.3s ease;
+    }
+    
+    body.light-mode .card {
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .card:active {
+      transform: scale(0.98);
+      opacity: 0.95;
     }
 
     .row{
@@ -152,21 +180,24 @@
     }
 
     input[type="number"], input[type="text"]{
-      padding:var(--input-pad);
-      border-radius:8px;
-      border:1px solid var(--input-border);
+      padding: var(--input-pad);
+      border-radius: 12px;
+      border: 1px solid var(--input-border);
       background-color: var(--input-bg);
       color: var(--text-color);
-      font-size:var(--input-size);
-      -webkit-appearance:none; 
-      appearance:none;
-      width:var(--input-width);
-      box-sizing:border-box;
+      font-size: var(--input-size);
+      -webkit-appearance: none; 
+      appearance: none;
+      width: var(--input-width);
+      box-sizing: border-box;
+      transition: all 0.2s ease;
     }
     
     input[type="number"]:focus, input[type="text"]:focus {
       outline: none;
-      border-color: #666;
+      border-color: var(--accent-green);
+      background-color: var(--input-bg);
+      box-shadow: 0 0 0 3px rgba(52, 199, 89, 0.1);
     }
     
     input::placeholder {
@@ -175,7 +206,7 @@
 
     select {
       padding: var(--input-pad);
-      border-radius: 8px;
+      border-radius: 12px;
       border: 1px solid var(--input-border);
       background-color: var(--input-bg);
       color: var(--text-color);
@@ -185,11 +216,13 @@
       width: var(--input-width);
       box-sizing: border-box;
       cursor: pointer;
+      transition: all 0.2s ease;
     }
 
     select:focus {
       outline: none;
-      border-color: #666;
+      border-color: var(--accent-green);
+      box-shadow: 0 0 0 3px rgba(52, 199, 89, 0.1);
     }
     
     .row4 input.money{ width:100%; }
@@ -203,18 +236,19 @@
       color: var(--text-color);
     }
     .result-big{
-      font-weight:700; 
-      font-size:1.5rem; 
+      font-weight: 700; 
+      font-size: 1.8rem; 
       color: var(--accent-green);
-      text-align:right; 
+      text-align: right; 
       overflow-wrap: break-word; 
-      word-wrap: break-word; 
+      word-wrap: break-word;
+      letter-spacing: -0.5px;
     }
-    .warn{ color:#ff6b35; }
+    .warn{ color: var(--accent-red); font-weight: 500; }
     .toggle{ 
-      display:flex; 
-      align-items:center; 
-      gap:8px; 
+      display: flex; 
+      align-items: center; 
+      gap: 8px; 
       margin-bottom: 12px;
     }
     
@@ -239,37 +273,44 @@
       background-color: var(--accent-red);
       color: white;
       border: none;
-      border-radius: 8px;
-      padding: 10px 15px;
+      border-radius: 14px;
+      padding: 14px 20px;
       font-size: 1rem;
       font-weight: 600;
       cursor: pointer;
       display: block;
       width: 100%;
       margin-top: 12px;
-      transition: background-color 0.2s ease;
+      transition: all 0.2s ease;
     }
     .reset-button:active {
       background-color: #cc2e24;
+      transform: scale(0.96);
     }
+    .reset-button:hover {
+      opacity: 0.9;
+    }
+    
     .reset-discount {
-    background: var(--accent-red);
-    color: white;
-    border: none;
-    border-radius: 6px;
-    width: 28px;
-    height: 28px;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
+      background: var(--accent-red);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      width: 36px;
+      height: 36px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      transition: all 0.2s ease;
     }
-.reset-discount:active {
-  background: #cc2e24;
-}
+    .reset-discount:active {
+      background: #cc2e24;
+      transform: scale(0.92);
+    }
 .rowpct {
   grid-template-columns: 1fr 90px 32px !important;
 }
@@ -279,71 +320,104 @@
   border-collapse: collapse;
   margin: 15px 0;
   font-size: 13px;
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 .faixa-table thead {
-  background: #2a3a4a;
-  color: white;
+  background: var(--input-bg);
+  color: var(--text-color);
 }
 
 .faixa-table th {
-  padding: 10px;
+  padding: 12px 10px;
   text-align: left;
   font-weight: 600;
+  border: 1px solid var(--border-color);
 }
 
 .faixa-table td {
-  padding: 8px 10px;
-  border-bottom: 1px solid #333;
+  padding: 10px;
+  border: 1px solid var(--border-color);
 }
 
 .faixa-table input {
   width: 100%;
-  padding: 6px;
-  background: #2a2a2a;
-  border: 1px solid #404040;
-  color: white;
-  border-radius: 4px;
+  padding: 8px;
+  background: var(--input-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  border-radius: 8px;
+  font-size: 13px;
 }
 
 .faixa-table button {
-  padding: 4px 8px;
-  background: #ff3b30;
+  padding: 6px 10px;
+  background: var(--accent-red);
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 12px;
+  font-weight: 600;
+  transition: all 0.2s ease;
 }
 
 .faixa-table button:active {
   background: #cc2e24;
+  transform: scale(0.95);
 }
 
 .add-faixa-btn {
-  background: #00ff88;
+  background: var(--accent-green);
   color: #000;
   border: none;
-  border-radius: 6px;
-  padding: 8px 12px;
+  border-radius: 12px;
+  padding: 10px 16px;
   cursor: pointer;
   font-weight: 600;
   margin: 10px 0;
+  transition: all 0.2s ease;
 }
 
 .add-faixa-btn:active {
-  opacity: 0.8;
+  transform: scale(0.96);
+}
+
+.add-faixa-btn:hover {
+  opacity: 0.9;
 }
 
 .info-box {
-  background: rgba(100, 150, 200, 0.2);
-  border-left: 3px solid #64a8d8;
-  padding: 10px;
+  background: rgba(52, 199, 89, 0.1);
+  border-left: 4px solid var(--accent-green);
+  padding: 12px;
   margin: 10px 0;
-  border-radius: 4px;
-  font-size: 12px;
+  border-radius: 12px;
+  font-size: 13px;
   color: var(--text-muted);
 }
+
+/* iOS-like animações e transições */
+button, input, select, .card {
+  -webkit-tap-highlight-color: transparent;
+}
+
+* {
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Animação de shake para avisos */
+@keyframes iosShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+.warn {
+  animation: iosShake 0.3s ease;
+}
+
     @media (max-width:360px){
       .row4{
         grid-template-columns:
@@ -366,16 +440,16 @@
   <div class="card">
     <div class="rowpct">
       <label class="compact-label">MARKETPLACE</label>
-      <select id="marketplaceSelect" style="grid-column: 2 / 4; padding: 10px; border-radius: 8px; border: 1px solid var(--input-border); background-color: var(--input-bg); color: var(--text-color); font-size: 16px;">
+      <select id="marketplaceSelect" style="grid-column: 2 / 4; padding: 12px; border-radius: 12px; border: 1px solid var(--input-border); background-color: var(--input-bg); color: var(--text-color); font-size: 16px;">
         <option value="">Uso Genérico</option>
         <option value="shopee">Shopee</option>
         <option value="mercadolivre">Mercado Livre</option>
       </select>
     </div>
     <div id="marketplaceConfigBtn" style="display: none; margin-top: 10px;">
-      <button onclick="toggleMarketplaceConfig()" style="width: 100%; padding: 10px; background: #2a4a6a; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">⚙️ Configurar Faixas de Preço</button>
+      <button onclick="toggleMarketplaceConfig()" style="width: 100%; padding: 12px; background: var(--accent-green); color: #000; border: none; border-radius: 12px; cursor: pointer; font-weight: 600; transition: all 0.2s ease;" onmousedown="this.style.transform='scale(0.95)';" onmouseup="this.style.transform='scale(1)';">⚙️ Configurar Faixas de Preço</button>
     </div>
-    <div id="marketplaceConfig" style="display: none; margin-top: 15px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+    <div id="marketplaceConfig" style="display: none; margin-top: 15px; padding: 15px; background: var(--input-bg); border-radius: 16px;">
       <!-- Configuração de faixas será inserida aqui -->
     </div>
   </div>
@@ -421,15 +495,15 @@
       <span id="promoToggleIcon" style="font-size: 14px;">▼</span>
     </button>
 
-    <div id="promoSection" style="display: none; margin-top: 15px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+    <div id="promoSection" style="display: none; margin-top: 15px; padding: 16px; background: var(--input-bg); border-radius: 16px;">
       <div style="margin-bottom: 15px;">
         <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 10px;">💡 Adicione cupons para calcular o preço necessário mantendo sua margem</div>
         <div id="couponsList"></div>
-        <button id="addCouponBtn" onclick="addCoupon()" style="width: 100%; padding: 10px; background: var(--accent-green); color: #000; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-top: 10px;">+ Adicionar Cupom</button>
+        <button id="addCouponBtn" onclick="addCoupon()" style="width: 100%; padding: 12px; background: var(--accent-green); color: #000; border: none; border-radius: 12px; cursor: pointer; font-weight: 600; margin-top: 10px; transition: all 0.2s ease;" onmousedown="this.style.transform='scale(0.96)';" onmouseup="this.style.transform='scale(1)';">+ Adicionar Cupom</button>
       </div>
-      <div style="padding: 10px; background: var(--input-bg); border-radius: 6px; border: 1px solid var(--border-color);">
-        <div style="color: var(--text-muted); font-size: 12px; margin-bottom: 5px;">Desconto Total:</div>
-        <div style="font-size: 18px; font-weight: 700; color: var(--accent-red);">
+      <div style="padding: 12px; background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border-color);">
+        <div style="color: var(--text-muted); font-size: 12px; margin-bottom: 8px; font-weight: 500;">Desconto Total:</div>
+        <div style="font-size: 20px; font-weight: 700; color: var(--accent-red);">
           <span id="totalCouponDiscount">0</span>% = <span id="totalCouponDiscountValue">R$ 0,00</span>
         </div>
       </div>
