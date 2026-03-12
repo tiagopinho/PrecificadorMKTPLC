@@ -805,8 +805,8 @@ button, input, select, .card {
       const largura = parseFloat(document.getElementById('ml-largura').value) || 0;
       const comprimento = parseFloat(document.getElementById('ml-comprimento').value) || 0;
       
-      // Calcular peso cúbico: (altura × largura × comprimento) / 6000
-      const pesoCubico = (altura * largura * comprimento) / 6000;
+      // Calcular peso cúbico: (altura × largura × comprimento) / 5000
+      const pesoCubico = (altura * largura * comprimento) / 5000;
       
       // Somar peso dos produtos
       let pesoReal = 0;
@@ -2119,7 +2119,7 @@ button, input, select, .card {
         console.log(`Frete: ${b9}, Embalagem: ${b9b}`);
         
         // Calcular peso cúbico
-        const pesoCubico = (altura * largura * comprimento) / 6000;
+        const pesoCubico = (altura * largura * comprimento) / 5000;
         const pesoReal = p1 * c1;
         const pesoUsado = Math.max(pesoReal, pesoCubico);
         console.log(`Peso Real: ${pesoReal.toFixed(3)} kg, Peso Cúbico: ${pesoCubico.toFixed(3)} kg, Peso Usado: ${pesoUsado.toFixed(3)} kg`);
