@@ -456,7 +456,7 @@ button, input, select, .card {
 
   <div class="rowpct">
   	<label class="compact-label">DESCONTO NO CUSTO (%)</label>
- 	<input type="number" inputmode="decimal" step="0.01" id="discount" placeholder="%" value="50">
+ 	<input type="text" inputmode="decimal" id="discount" placeholder="%" value="50">
  	<button class="reset-discount" onclick="clearDiscount()" title="Limpar desconto">✕</button>
   </div>
 
@@ -467,9 +467,9 @@ button, input, select, .card {
         <label style="font-weight: 600; color: var(--text-color); font-size: 14px;">Dimensões da Caixa (peso cúbico)</label>
       </div>
       <div class="row4">
-        <input type="number" inputmode="decimal" step="0.01" id="ml-altura" placeholder="altura">
-        <input type="number" inputmode="decimal" step="0.01" id="ml-largura" placeholder="largura">
-        <input type="number" inputmode="decimal" step="0.01" id="ml-comprimento" placeholder="comprimento">
+        <input type="text" inputmode="decimal" id="ml-altura" placeholder="altura">
+        <input type="text" inputmode="decimal" id="ml-largura" placeholder="largura">
+        <input type="text" inputmode="decimal" id="ml-comprimento" placeholder="comprimento">
       </div>
       <div style="display: flex; gap: 10px; margin-top: 8px; padding: 8px; background-color: var(--input-bg); border-radius: 6px; font-size: 13px;">
         <span style="color: var(--text-muted);">Peso Real: <strong id="ml-peso-real" style="color: var(--text-color);">0 kg</strong></span>
@@ -519,32 +519,32 @@ button, input, select, .card {
   <div class="card">
     <div class="rowpct">
       <label class="compact-label">MARGEM LUCRO (%)</label>
-      <input type="number" inputmode="decimal" step="0.01" id="b8" placeholder="%">
+      <input type="text" inputmode="decimal" id="b8" placeholder="%">
       <div id="r_b8" class="result-right">R$ 0,00</div>
     </div>
     <div class="rowpct" id="tax-fixo-wrapper">
       <label class="compact-label">CUSTO FIXO / FRETE (R$)</label>
-      <input type="number" inputmode="decimal" step="0.01" id="b9" placeholder="R$">
+      <input type="text" inputmode="decimal" id="b9" placeholder="R$">
       <div></div>
     </div>
     <div class="rowpct">
       <label class="compact-label">EMBALAGEM (R$)</label>
-      <input type="number" inputmode="decimal" step="0.01" id="b9b" placeholder="R$">
+      <input type="text" inputmode="decimal" id="b9b" placeholder="R$">
       <div></div>
     </div>
     <div class="rowpct">
       <label class="compact-label">IMPOSTO (%)</label>
-      <input type="number" inputmode="decimal" step="0.01" id="b10" placeholder="%">
+      <input type="text" inputmode="decimal" id="b10" placeholder="%">
       <div id="r_b10" class="result-right">R$ 0,00</div>
     </div>
     <div class="rowpct">
       <label class="compact-label">TAXA EXTRA (%)</label>
-      <input type="number" inputmode="decimal" step="0.01" id="b11" placeholder="%">
+      <input type="text" inputmode="decimal" id="b11" placeholder="%">
       <div id="r_b11" class="result-right">R$ 0,00</div>
     </div>
     <div class="rowpct" id="tax-comissao-wrapper">
       <label class="compact-label">COMISSÃO (%)</label>
-      <input type="number" inputmode="decimal" step="0.01" id="b12" placeholder="%">
+      <input type="text" inputmode="decimal" id="b12" placeholder="%">
       <div id="r_b12" class="result-right">R$ 0,00</div>
     </div>
     
@@ -565,13 +565,79 @@ button, input, select, .card {
   <script>
     const brl = v => v.toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
     const val = id => parseFloat(String(document.getElementById(id).value).replace(',', '.')) || 0;
-    const pct = id => { const raw = val(id); return (!isFinite(raw) ? 0 : (raw >= 1 ? raw/100 : raw)); };
+    const pct = id => { const raw = val(id); return (isFinite(raw) ? raw / 100 : 0); };
+
+    // ===== MÁSCARA AUTOMÁTICA DE DECIMAIS SIMPLES =====
+    // Dígitos entram sempre da direita para esquerda
+    // "6" → "0,06" | "60" → "0,60" | "600" → "6,00" | "6000" → "60,00"
+    function setupDecimalInputSupport() {
+      const decimalInputs = document.querySelectorAll('input[type="text"][inputmode="decimal"]:not([data-mask-applied])');
+      decimalInputs.forEach(input => {
+        input.setAttribute('data-mask-applied', 'true');
+        
+        input.addEventListener('input', function() {
+          // Remove tudo que não é número
+          let digitsOnly = this.value.replace(/\D/g, '');
+          
+          if (!digitsOnly) {
+            this.value = '';
+            return;
+          }
+          
+          // Garante 2 dígitos mínimo
+          while (digitsOnly.length < 2) {
+            digitsOnly = '0' + digitsOnly;
+          }
+          
+          // Últimos 2 dígitos = decimais
+          const decimals = digitsOnly.slice(-2);
+          // Resto = inteiros
+          let integers = digitsOnly.slice(0, -2) || '0';
+          integers = integers.replace(/^0+/, '') || '0';
+          
+          // Formata com separador de milhares
+          const formattedInt = integers.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+          this.value = formattedInt + ',' + decimals;
+          
+          // Registrar estado de marketplace se for b12 ou b8
+          if (this.id === 'b12') {
+            MARKETPLACE_ESTADO.b12_valores[MARKETPLACE_ESTADO.selecionado] = this.value;
+          }
+          if (this.id === 'b8') {
+            ultimoCampoAlterado = 'margem';
+          }
+          
+          // Chamar calc() com o valor formatado
+          calc();
+        });
+        
+        // Ao sair, converte vírgula em ponto
+        input.addEventListener('blur', function() {
+          if (this.value && this.value.includes(',')) {
+            this.value = this.value.replace(/\./g, '').replace(',', '.');
+          }
+        });
+      });
+      
+      // Para campos numéricos (quantidade)
+      const numericInputs = document.querySelectorAll('input[type="text"][inputmode="numeric"]:not([data-mask-applied])');
+      numericInputs.forEach(input => {
+        input.setAttribute('data-mask-applied', 'true');
+        input.addEventListener('input', function() {
+          this.value = this.value.replace(/[^\d]/g, '');
+          calc();
+        });
+      });
+    }
 
     const itemsDiv = document.getElementById('items');
     let PRODUCTS = [];
     let productCounter = 0; 
     const FIXED_IDS = ['b8','b9','b9b','b10','b11','b12','discount']; // Substituído divide2 por discount
     const PERSIST_KEY = 'precificador';
+    
+    // Flag para evitar cálculos enquanto máscara está sendo aplicada
+    let aplicandoMascara = false;
     
     // Rastreamento para cálculo bidirecional
     let ultimoCampoAlterado = ''; // 'margem', 'anuncio', ou ''
@@ -608,9 +674,9 @@ button, input, select, .card {
       wrapInputs.style.display = isVisible ? 'grid' : 'none';
       
       let innerHtml = `
-        <input class="money" type="number" inputmode="decimal" step="0.01" id="${bId}" placeholder="Valor" value="${costValue}">
-        <input class="qty" type="number" inputmode="numeric" pattern="[0-9]*" step="1" id="${cId}" value="${qtyValue}">
-        <input class="peso" type="number" inputmode="decimal" step="0.01" id="${pesoId}" placeholder="kg" value="${pesoValue}">
+        <input class="money" type="text" inputmode="decimal" id="${bId}" placeholder="Valor" value="${costValue}">
+        <input class="qty" type="text" inputmode="numeric" pattern="[0-9]*" id="${cId}" value="${qtyValue}">
+        <input class="peso" type="text" inputmode="decimal" id="${pesoId}" placeholder="kg" value="${pesoValue}">
       `;
 
       wrapInputs.innerHTML = innerHtml;
@@ -625,6 +691,9 @@ button, input, select, .card {
       costInput.addEventListener('input', handleProductInput, { passive:true });
       qtyInput.addEventListener('input', handleProductChange, { passive:true });
       pesoInput.addEventListener('input', handleProductChange, { passive:true });
+      
+      // Aplicar máscara ao novo input (idempotente - não cria duplicatas)
+      setupDecimalInputSupport();
 
       return costInput.parentElement;
     }
@@ -632,6 +701,8 @@ button, input, select, .card {
     function handleProductChange(e) {
       // Quando qty ou peso muda, recalcular
       // Se estamos em modo "anuncio" (valor anuncio foi digitado), recalcular margem também
+      if (aplicandoMascara) return; // Não recalcular enquanto máscara está sendo aplicada
+      
       calc();
       
       // Atualizar peso cúbico se em Mercado Livre
@@ -648,6 +719,8 @@ button, input, select, .card {
     }
 
     function handleProductInput(e) {
+      if (aplicandoMascara) return; // Não recalcular enquanto máscara está sendo aplicada
+      
       calc(); 
 
       const currentInput = e.target;
@@ -705,14 +778,22 @@ button, input, select, .card {
     FIXED_IDS.forEach(id => {
       const el = document.getElementById(id);
       if (el) {
-        el.addEventListener('input', function() {
-          if (id === 'b8') ultimoCampoAlterado = 'margem';
-          // Guardar b12 no marketplace atual
-          if (id === 'b12') {
+        // Listener removido para evitar calc() duplicado
+        // A máscara já chama calc() quando necessário
+        
+        // Apenas guardar b12 no marketplace quando sair do campo
+        if (id === 'b12') {
+          el.addEventListener('blur', function() {
             MARKETPLACE_ESTADO.b12_valores[MARKETPLACE_ESTADO.selecionado] = el.value;
-          }
-          calc();
-        }, { passive:true });
+          });
+        }
+        
+        // Para b8, guardar quando sair
+        if (id === 'b8') {
+          el.addEventListener('blur', function() {
+            ultimoCampoAlterado = 'margem';
+          });
+        }
       }
     });
     
@@ -1655,6 +1736,9 @@ button, input, select, .card {
     
     atualizarRowsComPeso();    // TERCEIRO: ajusta campos peso
     
+    // Registrar máscaras em todos os inputs (incluindo os restaurados)
+    setupDecimalInputSupport();
+    
     // Chamar calc() se há dados salvos para recalcular valores em R$
     if (temDadosSalvos) {
       calc();
@@ -1694,6 +1778,9 @@ button, input, select, .card {
     
     // Inicializar tema ao carregar
     initTheme();
+    
+    // ===== SUPORTE PARA VÍRGULA/PONTO EM CAMPOS DECIMAIS =====
+    setupDecimalInputSupport();
 
     function togglePromoSection() {
       const section = document.getElementById('promoSection');
